@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, CircleUserRound, KeyRound, LogOut } from "lucide-react";
-import { inicio, menus, miCuenta, paginas, type Item, type Rol } from "@/lib/menu";
+import { inicio, menus, miCuenta, pagina, paginaDe, type Item, type Rol } from "@/lib/menu";
 
 type Yo = { nombre: string; rol: Rol; inactividadMinutos: number };
 
@@ -24,7 +24,8 @@ export function MarcoPortal({ children }: { children: ReactNode }) {
   }, []);
 
   // Cada rol solo entra a sus páginas; cualquier otra lo manda a su inicio.
-  const permitida = yo && paginas(yo.rol).some((p) => p.ruta === ruta);
+  const entrada = yo && paginaDe(yo.rol, ruta);
+  const permitida = !!entrada;
   useEffect(() => {
     if (yo && !permitida) router.replace(inicio(yo.rol));
   }, [yo, permitida, router]);
@@ -36,7 +37,7 @@ export function MarcoPortal({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col bg-blanco">
       <EncabezadoPortal yo={yo} />
       <div className="flex flex-1">
-        <MenuLateral rol={yo.rol} ruta={ruta} />
+        <MenuLateral rol={yo.rol} ruta={entrada.ruta} />
         <main className="flex flex-1 flex-col gap-5 px-8 pt-7 pb-8">{children}</main>
       </div>
     </div>
@@ -169,6 +170,20 @@ function ItemMenu({ item, ruta }: { item: Item; ruta: string }) {
         </ul>
       )}
     </li>
+  );
+}
+
+// Página de una entrada del menú cuyo módulo todavía no se hace (recuadro de la maqueta Esqueleto).
+export function ModuloPendiente({ ruta }: { ruta: string }) {
+  const p = pagina(ruta);
+  if (!p) return null;
+  return (
+    <>
+      <EncabezadoPagina titulo={p.titulo} descripcion={p.descripcion} />
+      <div className="flex flex-1 items-center justify-center rounded-[10px] border-2 border-dashed border-portal-borde text-portal-subtexto">
+        Contenido del módulo — se maqueta por separado
+      </div>
+    </>
   );
 }
 

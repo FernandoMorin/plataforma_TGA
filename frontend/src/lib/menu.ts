@@ -91,6 +91,13 @@ export const paginas = (rol: Rol): Pagina[] => [
 
 export const inicio = (rol: Rol) => paginas(rol)[0].ruta;
 
+// Entrada del menú a la que pertenece una ruta: la más específica que la contiene
+// (la ficha /alumnos/300101 pertenece a «Consulta de alumnos»). Sin entrada, el rol no tiene acceso.
+export const paginaDe = (rol: Rol, ruta: string) =>
+  paginas(rol)
+    .filter((p) => ruta === p.ruta || ruta.startsWith(`${p.ruta}/`))
+    .sort((a, b) => b.ruta.length - a.ruta.length)[0];
+
 // Todas las páginas de todos los roles, sin repetir: las genera la ruta comodín del portal.
 export const todasLasPaginas = (): Pagina[] => {
   const unicas = new Map<string, Pagina>();

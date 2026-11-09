@@ -10,3 +10,6 @@ backend/obj/
 
 # Sistema
 .DS_Store
+
+# Archivos subidos (documentos de alumnos y egresados)
+backend/App_Data/

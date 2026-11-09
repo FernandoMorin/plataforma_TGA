@@ -3,6 +3,35 @@ using PlataformaTGA.Models;
 
 namespace PlataformaTGA.Data;
 
+// Ids de catálogos que usa el código; deben coincidir con SembrarCatalogos.
+public static class TipoDocumento
+{
+    public const int Avance = 1, Evidencia = 2, ActaEvaluacion = 3, TrabajoFinal = 5, Constancia = 7, ComprobanteToefl = 8;
+}
+
+public static class EstadoAcademico
+{
+    public const int Activo = 1, Titulado = 2, BajaDefinitiva = 3, BajaTemporal = 4;
+
+    // Diagrama de estados del AMyD: Activo -> Baja temporal / Baja definitiva / Titulado;
+    // Baja temporal -> Activo (reingreso) / Baja definitiva. Titulado y Baja definitiva son finales.
+    public static readonly IReadOnlyDictionary<int, int[]> Transiciones = new Dictionary<int, int[]>
+    {
+        [Activo] = [BajaTemporal, BajaDefinitiva, Titulado],
+        [BajaTemporal] = [Activo, BajaDefinitiva],
+    };
+}
+
+public static class EstadoToefl
+{
+    public const int Pendiente = 1, Presentado = 2, Aprobado = 3;
+}
+
+public static class EstadoTesis
+{
+    public const int Aceptada = 4, Cancelada = 5;
+}
+
 // Lo que el scaffolding no trae: llaves naturales, CHECK y catálogos.
 // TgaDbContext.cs queda como lo generó EF; los cambios al modelo van aquí o en las entidades.
 public partial class TgaDbContext

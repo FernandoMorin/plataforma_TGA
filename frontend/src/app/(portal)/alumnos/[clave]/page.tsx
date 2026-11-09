@@ -1,0 +1,8 @@
+import { FichaAlumno } from "./ficha";
+
+// Se pinta después de confirmar la sesión (ver (portal)/layout.tsx, que también pone el Suspense).
+export const instant = false;
+
+export default function Page() {
+  return <FichaAlumno />;
+}

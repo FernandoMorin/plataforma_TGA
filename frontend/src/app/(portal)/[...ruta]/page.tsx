@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { EncabezadoPagina } from "@/components/portal";
+import { ModuloPendiente } from "@/components/portal";
 import { pagina, todasLasPaginas } from "@/lib/menu";
 
 // Página genérica para cada entrada del menú que todavía no tiene su módulo.
@@ -13,15 +13,7 @@ export function generateStaticParams() {
 }
 
 export default async function PaginaPendiente({ params }: PageProps<"/[...ruta]">) {
-  const { ruta } = await params;
-  const p = pagina(`/${ruta.join("/")}`);
-  if (!p) notFound();
-  return (
-    <>
-      <EncabezadoPagina titulo={p.titulo} descripcion={p.descripcion} />
-      <div className="flex flex-1 items-center justify-center rounded-[10px] border-2 border-dashed border-portal-borde text-portal-subtexto">
-        Contenido del módulo — se maqueta por separado
-      </div>
-    </>
-  );
+  const ruta = `/${(await params).ruta.join("/")}`;
+  if (!pagina(ruta)) notFound();
+  return <ModuloPendiente ruta={ruta} />;
 }

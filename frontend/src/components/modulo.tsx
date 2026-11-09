@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Componentes de módulo de Figma (página Alumnos, sección «Componentes de módulo»).
@@ -34,18 +34,25 @@ export function BarraAvance({ porcentaje }: { porcentaje: number }) {
   );
 }
 
-export function BotonPortal({ secundario, className = "", ...boton }: ComponentProps<"button"> & { secundario?: boolean }) {
-  const estilo = secundario ? "text-portal-activo" : "bg-portal-activo text-blanco";
-  return <button className={`flex items-center gap-2 rounded-lg py-2.5 pr-[18px] pl-4 text-[15px] font-semibold ${estilo} ${className}`} {...boton} />;
+// Variantes de Figma «Botón portal»: principal (relleno), contorno y secundario (solo texto).
+export function BotonPortal({ variante = "principal", className = "", ...boton }: ComponentProps<"button"> & { variante?: "principal" | "contorno" | "secundario" }) {
+  const estilo = {
+    principal: "bg-portal-activo text-blanco",
+    contorno: "border border-portal-borde-campo bg-blanco text-portal-menu-texto",
+    secundario: "text-portal-activo",
+  }[variante];
+  return <button className={`flex items-center gap-2 rounded-lg py-2.5 pr-[18px] pl-4 text-[15px] font-semibold disabled:opacity-50 ${estilo} ${className}`} {...boton} />;
 }
 
-export function Pestanas<T extends string>({ pestanas, actual, onCambio }: {
-  pestanas: { valor: T; texto: string; conteo: number }[];
+// «espacio»: dentro de una tarjeta (consulta) o suelto en la página (ficha), según Figma.
+export function Pestanas<T extends string>({ pestanas, actual, onCambio, espacio = "gap-6 px-5 pt-1.5" }: {
+  pestanas: { valor: T; texto: string; conteo?: number }[];
   actual: T;
   onCambio: (valor: T) => void;
+  espacio?: string;
 }) {
   return (
-    <div role="tablist" className="flex gap-6 border-b border-portal-borde px-5 pt-1.5">
+    <div role="tablist" className={`flex border-b border-portal-borde ${espacio}`}>
       {pestanas.map((p) => {
         const activa = p.valor === actual;
         return (
@@ -57,10 +64,35 @@ export function Pestanas<T extends string>({ pestanas, actual, onCambio }: {
             className={`flex items-center gap-2 border-b-2 px-1 py-2.5 text-[15px] ${activa ? "border-portal-activo font-semibold text-portal-activo" : "border-transparent font-medium text-portal-subtexto"}`}
           >
             {p.texto}
-            <span className={`rounded-full px-[7px] py-px text-xs font-semibold ${activa ? "bg-portal-activo-fondo" : "bg-portal-neutro-fondo"}`}>{p.conteo}</span>
+            {p.conteo !== undefined && (
+              <span className={`rounded-full px-[7px] py-px text-xs font-semibold ${activa ? "bg-portal-activo-fondo" : "bg-portal-neutro-fondo"}`}>{p.conteo}</span>
+            )}
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// Tarjeta de la ficha (Figma F1): título, insignia opcional a la derecha y contenido.
+export function TarjetaPortal({ titulo, insignia, children }: { titulo: string; insignia?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="flex flex-1 flex-col gap-3.5 rounded-xl border border-portal-borde bg-blanco px-[22px] py-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-portal-titulo">{titulo}</h2>
+        {insignia}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// Renglón «etiqueta: valor» de las tarjetas de la ficha.
+export function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <dt className="w-[170px] shrink-0 text-portal-subtexto">{etiqueta}</dt>
+      <dd className="font-medium text-portal-titulo">{children}</dd>
     </div>
   );
 }
@@ -154,12 +186,70 @@ export function FiltroMultiple({ etiqueta, titulo, opciones, seleccion, onAplica
             );
           })}
           <div className="flex items-center justify-between border-t border-portal-borde pt-2">
-            <BotonPortal secundario onClick={() => aplicar([])}>Limpiar</BotonPortal>
+            <BotonPortal variante="secundario" onClick={() => aplicar([])}>Limpiar</BotonPortal>
             <BotonPortal onClick={() => aplicar(borrador)}>Aplicar</BotonPortal>
           </div>
         </fieldset>
       )}
     </div>
+  );
+}
+
+// Diálogo modal (Figma F5-F7) sobre <dialog>: fondo, foco atrapado y Escape los da el navegador.
+// El contenido solo existe mientras está abierto, así cada apertura empieza con el formulario limpio.
+export function Dialogo({ abierto, onCerrar, titulo, subtitulo, ancho, children }: {
+  abierto: boolean;
+  onCerrar: () => void;
+  titulo: string;
+  subtitulo?: string;
+  ancho: string;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (abierto) ref.current?.showModal();
+    else ref.current?.close();
+  }, [abierto]);
+  return (
+    <dialog
+      ref={ref}
+      onClose={onCerrar}
+      aria-labelledby="dialogo-titulo"
+      className={`m-auto rounded-[14px] bg-blanco px-7 pt-7 pb-6 shadow-[0_16px_40px_rgba(8,15,41,0.25)] backdrop:bg-[rgba(8,15,41,0.35)] ${ancho}`}
+    >
+      {abierto && (
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1">
+            <h2 id="dialogo-titulo" className="text-xl font-bold text-portal-titulo">{titulo}</h2>
+            {subtitulo && <p className="text-sm text-portal-descripcion">{subtitulo}</p>}
+          </div>
+          {children}
+        </div>
+      )}
+    </dialog>
+  );
+}
+
+const cajaCampo = "w-full rounded-lg border border-portal-borde-campo bg-blanco px-3 py-2.5 text-[15px] text-portal-titulo outline-none focus:border-portal-activo";
+
+export function CampoPortal({ etiqueta, ...input }: { etiqueta: string } & ComponentProps<"input">) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold text-portal-menu-texto">{etiqueta}</span>
+      <input className={cajaCampo} {...input} />
+    </label>
+  );
+}
+
+export function SelectorPortal({ etiqueta, children, ...select }: { etiqueta: string } & ComponentProps<"select">) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold text-portal-menu-texto">{etiqueta}</span>
+      <span className="relative">
+        <select className={`${cajaCampo} h-[42px] appearance-none pr-9`} {...select}>{children}</select>
+        <ChevronDown size={18} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-portal-subtexto" aria-hidden />
+      </span>
+    </label>
   );
 }
 
@@ -219,7 +309,7 @@ export function FiltroRango({ etiqueta, titulo, unidad, min, max, paso, rango, o
               onChange={(e) => setBorrador([desde, Math.max(Number(e.target.value), desde)])} />
           </div>
           <div className="flex items-center justify-between border-t border-portal-borde pt-2">
-            <BotonPortal secundario onClick={() => aplicar(null)}>Limpiar</BotonPortal>
+            <BotonPortal variante="secundario" onClick={() => aplicar(null)}>Limpiar</BotonPortal>
             <BotonPortal onClick={() => aplicar(desde === min && hasta === max ? null : borrador)}>Aplicar</BotonPortal>
           </div>
         </fieldset>

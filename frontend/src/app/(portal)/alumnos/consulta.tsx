@@ -25,9 +25,9 @@ type Alumno = {
 
 const POR_PAGINA = 8;
 
-const tonoEstado: Record<string, Tono> = { Activo: "verde", Titulado: "azul", "Baja temporal": "ambar", "Baja definitiva": "rojo" };
-const tonoToefl: Record<string, Tono> = { Aprobado: "verde", Presentado: "ambar", Pendiente: "gris" };
-const tonoTitulacion: Record<string, Tono> = {
+export const tonoEstado: Record<string, Tono> = { Activo: "verde", Titulado: "azul", "Baja temporal": "ambar", "Baja definitiva": "rojo" };
+export const tonoToefl: Record<string, Tono> = { Aprobado: "verde", Presentado: "ambar", Pendiente: "gris" };
+export const tonoTitulacion: Record<string, Tono> = {
   "Solicitud pendiente": "gris", "Sin iniciar": "gris", "En progreso": "ambar", "En evaluación": "azul", Aceptada: "verde", Cancelada: "rojo",
 };
 
@@ -190,10 +190,9 @@ export function ConsultaAlumnos() {
                   )}
                 </td>
                 <td className="pr-5 text-right">
-                  {/* shortcut: la ficha del alumno (F1) aún no existe; enlazar a /alumnos/[clave] al hacerla. */}
-                  <button disabled aria-label={`Ver ficha de ${a.nombre}`} className="inline-flex size-[34px] items-center justify-center rounded-lg border border-portal-borde-campo text-portal-activo disabled:opacity-50">
+                  <Link href={`/alumnos/${a.clave}`} aria-label={`Ver ficha de ${a.nombre}`} className="inline-flex size-[34px] items-center justify-center rounded-lg border border-portal-borde-campo text-portal-activo">
                     <Eye size={18} aria-hidden />
-                  </button>
+                  </Link>
                 </td>
               </tr>
             ))}
