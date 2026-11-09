@@ -1,0 +1,6 @@
+@PlataformaTGA_HostAddress = http://localhost:5015
+
+GET {{PlataformaTGA_HostAddress}}/api/salud
+Accept: application/json
+
+###

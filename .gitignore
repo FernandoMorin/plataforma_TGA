@@ -1,0 +1,12 @@
+# .NET
+backend/bin/
+backend/obj/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+
+# Sistema
+.DS_Store
