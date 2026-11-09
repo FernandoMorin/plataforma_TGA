@@ -5,9 +5,8 @@ Seguimiento de alumnos, titulación y egresados de la Maestría en Tecnología y
 
 | Carpeta | Qué es |
 |---|---|
-| `backend/` | API en ASP.NET Core (.NET 10, EF Core 10) |
+| `backend/` | API en ASP.NET Core (.NET 10, EF Core 10). La base de datos se define aquí, con migraciones |
 | `frontend/` | Interfaz en Next.js 16 (TypeScript y Tailwind) |
-| `database/` | `esquema.sql`: crea la base `plataforma_TGA` con sus tablas y catálogos |
 
 El navegador solo habla con Next.js; las peticiones a `/api/*` las reenvía Next.js al backend.
 
@@ -19,38 +18,86 @@ El navegador solo habla con Next.js; las peticiones a `/api/*` las reenvía Next
 | Node.js | 22 o superior | `node -v` |
 | MySQL | 9 | `mysql --version` |
 
-## 1. Base de datos
+## 1. Herramientas del proyecto
 
-Se hace una sola vez. Desde esta carpeta, como root de MySQL:
+Desde esta carpeta (`Plataforma-TGA/`), instala `dotnet-ef` en la versión que fija el proyecto:
 
 ```bash
-mysql -u root -p < database/esquema.sql
+dotnet tool restore
 ```
 
-Crea el usuario que usará la aplicación y dale permisos sobre la base. Si ya existe, omite el
-`CREATE USER`:
+## 2. Base de datos
+
+Todos los comandos de esta sección se corren desde `Plataforma-TGA/`.
+
+### 2.1 Crear la base y el usuario de la aplicación
+
+Como root de MySQL, una sola vez. Si el usuario `admin` ya existe, omite el `CREATE USER`:
 
 ```sql
+CREATE DATABASE plataforma_TGA CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'admin'@'localhost' IDENTIFIED BY '<contraseña>';
 GRANT SELECT, INSERT, UPDATE, DELETE ON plataforma_TGA.* TO 'admin'@'localhost';
 ```
 
 > En Linux, MySQL distingue mayúsculas en el nombre de la base: siempre es `plataforma_TGA`.
 
-También puedes abrir `database/esquema.sql` en MySQL Workbench, conectado como root, y ejecutarlo
-con el botón del rayo (Execute).
+### 2.2 Guardar la cadena de conexión
 
-## 2. Backend
-
-La cadena de conexión no va en el repositorio: se guarda con `dotnet user-secrets`. Se hace una sola
-vez por máquina:
+No va en el repositorio: se guarda con `dotnet user-secrets`, una vez por máquina:
 
 ```bash
-cd backend
-dotnet user-secrets set "ConnectionStrings:TgaDb" "Server=localhost;Port=3306;Database=plataforma_TGA;User=admin;Password=<contraseña>;"
+dotnet user-secrets set "ConnectionStrings:TgaDb" "Server=localhost;Port=3306;Database=plataforma_TGA;User=admin;Password=<contraseña>;" --project backend
 ```
 
-Para levantarlo:
+### 2.3 Crear las tablas (aplicar las migraciones)
+
+El usuario `admin` solo lee y escribe datos, así que las migraciones no se aplican con
+`dotnet ef database update`: se genera el SQL y se corre como root.
+
+```bash
+dotnet dotnet-ef migrations script --project backend -o migraciones.sql
+mysql -u root -p plataforma_TGA < migraciones.sql
+rm migraciones.sql
+```
+
+Esto crea todas las tablas y llena los catálogos (roles, estados, tipos de documento...). En
+MySQL Workbench: conéctate como root, selecciona `plataforma_TGA`, abre `migraciones.sql` y
+ejecútalo con el botón del rayo (Execute).
+
+### 2.4 Cuando llegan migraciones nuevas
+
+Revisa cuáles faltan en tu base (salen marcadas como `Pending`):
+
+```bash
+dotnet dotnet-ef migrations list --project backend
+```
+
+Genera el SQL desde la **última que ya tienes aplicada** y córrelo como root:
+
+```bash
+dotnet dotnet-ef migrations script <ÚltimaAplicada> --project backend -o migraciones.sql
+mysql -u root -p plataforma_TGA < migraciones.sql
+rm migraciones.sql
+```
+
+> No uses `--idempotent`: con el proveedor de MySQL genera SQL que MySQL no acepta.
+
+### 2.5 Cambiar la base de datos
+
+Nadie toca la base a mano: los cambios se hacen en el código y se convierten en una migración.
+
+1. Cambia la entidad en `backend/Models/` o su configuración en
+   `backend/Data/TgaDbContext.Configuracion.cs`.
+2. Crea la migración:
+
+   ```bash
+   dotnet dotnet-ef migrations add <NombreDelCambio> --project backend --output-dir Data/Migraciones
+   ```
+
+3. Revisa el SQL y aplícalo como en el paso 2.4.
+
+## 3. Backend
 
 ```bash
 cd backend
@@ -59,7 +106,26 @@ dotnet run --launch-profile http
 
 Queda en http://localhost:5015.
 
-## 3. Frontend
+### Cuentas de prueba
+
+En modo desarrollo, la primera vez que arranca con la base sin usuarios, el backend siembra estos
+datos (`backend/Data/SeederDesarrollo.cs`). Todas las cuentas usan la contraseña `Prueba2026!`.
+
+| Correo | Rol | Clave | Nota |
+|---|---|---|---|
+| `admin@uaslp.mx` | Administrador | — | |
+| `crimo@uaslp.mx` | Coordinador | 100202 | Carlos Rivera Morales; también es profesor |
+| `atora@uaslp.mx` | Profesor | 100201 | Ana Torres Ramírez |
+| `lgofe@uaslp.mx` | Profesor | 100203 | Laura Gómez Fernández |
+| `mortiz@uaq.mx` | Profesor | EXT-001 | Miguel Ortiz Luna, externo (UAQ), vigente hasta 2027-07-31 |
+| `a300101@alumnos.uaslp.mx` | Alumno | 300101 | José Hernández Castillo, generación 2025-2027, 3.er semestre |
+| `a300102@alumnos.uaslp.mx` | Alumno | 300102 | Mariana López Ruiz, generación 2026-2028, 1.er semestre |
+| `rosa.sanchez@gmail.com` | Egresado | 2022RSC01 | Rosa Sánchez Cruz, generación 2022-2024 |
+
+También crea las generaciones 2022-2024, 2025-2027 y 2026-2028, y el periodo 2026-2027 Otoño. Para
+volver a sembrar, vacía las tablas de datos (no las de catálogos) y reinicia el backend.
+
+## 4. Frontend
 
 La primera vez, instala las dependencias:
 
@@ -80,7 +146,7 @@ Queda en http://localhost:3000.
 Si el backend está en otra dirección, indícala con la variable de entorno `BACKEND_URL`, por
 ejemplo `BACKEND_URL=http://localhost:5015 npm run dev`.
 
-## 4. Comprobar que todo funciona
+## 5. Comprobar que todo funciona
 
 Con los dos levantados, abre http://localhost:3000/api/salud. Debe responder:
 
@@ -90,9 +156,9 @@ Con los dos levantados, abre http://localhost:3000/api/salud. Debe responder:
 
 | Respuesta | Qué revisar |
 |---|---|
-| `"baseDeDatos":"sin conexión"` | El usuario, la contraseña o los permisos sobre `plataforma_TGA` (pasos 1 y 2) |
+| `"baseDeDatos":"sin conexión"` | El usuario, la contraseña o los permisos sobre `plataforma_TGA` (pasos 2.1 y 2.2) |
 | Error 500 al abrir la página | El backend no está levantado o no está en el puerto 5015 |
-| El backend no arranca: «Falta ConnectionStrings:TgaDb» | Falta el `user-secrets set` del paso 2 |
+| El backend no arranca: «Falta ConnectionStrings:TgaDb» | Falta el paso 2.2 |
 
 ## Comandos de uso diario
 
@@ -100,6 +166,8 @@ Con los dos levantados, abre http://localhost:3000/api/salud. Debe responder:
 |---|---|---|
 | Levantar el backend | `backend/` | `dotnet run --launch-profile http` |
 | Levantar el frontend | `frontend/` | `npm run dev` |
+| Ver migraciones pendientes | `Plataforma-TGA/` | `dotnet dotnet-ef migrations list --project backend` |
+| Crear una migración | `Plataforma-TGA/` | `dotnet dotnet-ef migrations add <Nombre> --project backend --output-dir Data/Migraciones` |
 | Compilar el backend | `backend/` | `dotnet build` |
 | Compilar el frontend para producción | `frontend/` | `npm run build` |
 | Revisar el código del frontend | `frontend/` | `npm run lint` |

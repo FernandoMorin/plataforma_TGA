@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Colección de variables «UASLP · Tema» de Figma. */
+@theme {
+  --color-blanco: #ffffff;
+  --color-primario: #004a98;
+  --color-acento: #00b2e3;
+  --color-texto: #000000;
+  --color-titulo: #003c92;
+  --color-tarjeta-cabecera: #e7ecf1;
+  --color-borde: #dfdfdf;
+  --color-campo-relleno: #e8f0fe;
+  --color-campo-borde: #ced4da;
+  --color-campo-foco: #86b7fe;
+  --color-placeholder: #6c757d;
+  --color-boton: #2080cb;
+  --color-boton-hover: #0070c5;
+  --color-error-texto: #842029;
+  --color-error-fondo: #f8d7da;
+  --color-error-borde: #f5c2c7;
+  --color-info-texto: #055160;
+  --color-info-fondo: #cff4fc;
+  --color-info-borde: #b6effb;
+  --color-exito-texto: #0f5132;
+  --color-exito-fondo: #d1e7dd;
+  --color-exito-borde: #badbcc;
+  --color-vinculo: #0d6efd;
+  --color-fondo: #f8f8f8;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Portales (página Esqueleto de Figma). */
+  --color-portal-logo: #001d57;
+  --color-portal-degradado-inicio: #002265;
+  --color-portal-degradado-fin: #001b52;
+  --color-portal-borde: #e6e9f0;
+  --color-portal-activo: #0b4bd1;
+  --color-portal-activo-fondo: #eef4fe;
+  --color-portal-menu-texto: #101a5a;
+  --color-portal-icono: #5b607f;
+  --color-portal-salir: #d62828;
+  --color-portal-subtexto: #555c8e;
+  --color-portal-placeholder: #8a90ab;
+  --color-portal-titulo: #0b0d1a;
+  --color-portal-descripcion: #4a5385;
+  --color-portal-borde-campo: #d3d8e3;
+  --color-portal-tabla-cabecera: #f7f8fb;
+  --color-portal-neutro-fondo: #eef0f4;
+  --color-portal-exito-fondo: #ecf8f0;
+  --color-portal-exito-texto: #1a7f3c;
+  --color-portal-advertencia-fondo: #fff7e6;
+  --color-portal-advertencia-texto: #8a5300;
+  --color-portal-error-fondo: #fdecec;
+  --color-portal-error-texto: #b42318;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* La tipografía de la maqueta (Inter) es provisional: el equipo usará la de su plantilla. */
+  --font-sans: var(--font-inter);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  /* Las maquetas usan interlineado «normal»; Tailwind trae 1.5. */
+  line-height: normal;
 }
