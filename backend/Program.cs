@@ -6,6 +6,9 @@ using PlataformaTGA.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Actas en PDF. Licencia Community: gratuita para proyectos académicos y organizaciones con ingresos menores a 1 M USD.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddDbContext<TgaDbContext>(o =>
@@ -13,6 +16,8 @@ builder.Services.AddDbContext<TgaDbContext>(o =>
         ?? throw new InvalidOperationException("Falta ConnectionStrings:TgaDb (dotnet user-secrets).")));
 
 builder.Services.AddScoped<ValidarSesion>();
+builder.Services.AddSingleton<UniversidadExterna>();
+builder.Services.AddSingleton<Correo>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o =>
 {
     o.Cookie.Name = "TGA.Sesion";
@@ -34,6 +39,10 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
+    // Recuperación de contraseña: más estricto, porque cada solicitud puede mandar un correo.
+    o.AddPolicy("recuperacion", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(10) }));
 });
 
 var app = builder.Build();
@@ -48,6 +57,16 @@ if (app.Environment.IsDevelopment())
 // Sin UseHttpsRedirection: el backend solo se llama a través del proxy de Next.js, por HTTP local.
 
 app.UseAuthentication();
+app.Use(async (ctx, next) =>
+{
+    if (ctx.User.HasClaim(Seguridad.ClaimCambio, "1") && !Seguridad.PermitidoSinCambio(ctx.Request.Path))
+    {
+        ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await ctx.Response.WriteAsJsonAsync(new { mensaje = "Cambia tu contraseña para continuar." });
+        return;
+    }
+    await next();
+});
 app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers();

@@ -41,6 +41,8 @@
   --color-portal-placeholder: #8a90ab;
   --color-portal-titulo: #0b0d1a;
   --color-portal-descripcion: #4a5385;
+  --color-portal-info-fondo: #f2f6fe;
+  --color-portal-info-borde: #d6e4fd;
   --color-portal-borde-campo: #d3d8e3;
   --color-portal-tabla-cabecera: #f7f8fb;
   --color-portal-neutro-fondo: #eef0f4;
@@ -48,8 +50,12 @@
   --color-portal-exito-texto: #1a7f3c;
   --color-portal-advertencia-fondo: #fff7e6;
   --color-portal-advertencia-texto: #8a5300;
+  --color-portal-advertencia-borde: #ffe0a3;
+  --color-portal-exito-borde: #c3e6cf;
   --color-portal-error-fondo: #fdecec;
   --color-portal-error-texto: #b42318;
+  --color-portal-naranja-fondo: #fff0e5;
+  --color-portal-naranja-texto: #b54708;
 
   /* La tipografía de la maqueta (Inter) es provisional: el equipo usará la de su plantilla. */
   --font-sans: var(--font-inter);

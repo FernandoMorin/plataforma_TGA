@@ -1,5 +1,7 @@
 "use client";
 
+import { sesionVencida } from "@/lib/acceso";
+
 import { useState, type FormEvent, type ReactNode } from "react";
 import { BotonPortal, CampoPortal, Dialogo, Insignia, SelectorPortal } from "@/components/modulo";
 import { tonoEstado } from "../consulta";
@@ -8,7 +10,7 @@ import { tonoEstado } from "../consulta";
 
 export type Opciones = {
   generaciones: { id: number; nombre: string | null }[];
-  periodos: { id: number; nombre: string | null }[];
+  periodos: { id: number; nombre: string | null; fechaInicio?: string | null }[];
   modalidades: { id: number; nombre: string }[];
   estados: { id: number; nombre: string }[];
 };
@@ -24,7 +26,7 @@ function useEnvio(onListo: () => void) {
     setError(null);
     try {
       const res = await fetch(ruta, { method: metodo, headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) });
-      if (res.status === 401) return window.location.replace("/?sesion=terminada");
+      if (res.status === 401) return sesionVencida();
       if (res.ok) return onListo();
       const r = await res.json().catch(() => ({}));
       setError(r.mensaje ?? "Revisa los datos e intenta de nuevo.");

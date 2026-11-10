@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import { Tarjeta } from "@/components/ui";
 
 // Encabezado, barra de frase y pie del estándar institucional (Figma, página Login: 7:383, 7:396, 7:398).
 
@@ -59,5 +61,44 @@ export function PieDePagina() {
         </ul>
       </div>
     </footer>
+  );
+}
+
+// Panel de la derecha del login y de recuperar acceso (Figma, Login, «Panel informativo» 7:454).
+const vinculo = "text-vinculo underline";
+
+export function PanelInformativo() {
+  return (
+    <div className="flex min-w-80 flex-1 flex-col gap-3">
+      <p>Para el uso del Servicio de autenticación, es indispensable contar con una cuenta institucional:</p>
+      <Tarjeta titulo="Estudiantes">
+        <div className="flex flex-col gap-3.5 p-5">
+          <p>
+            <b>Para asesoría:</b> Acuda al Centro de Servicios Escolares de su Escuela o Facultad.
+          </p>
+          <div className="flex flex-col gap-0.5">
+            <p>Si no recuerda su contraseña, la puede cambiar en el siguiente vínculo:</p>
+            <Link href="/recuperar" className={vinculo}>Restablece contraseña</Link>
+          </div>
+        </div>
+      </Tarjeta>
+      <Tarjeta titulo="Administrativos / Docentes">
+        <div className="flex flex-col gap-3.5 p-5">
+          <p>Pueden ingresar con su cuenta de correo institucional.</p>
+          <p>Para más información, acuda con el Responsable de Tecnología de su Unidad.</p>
+          {/* shortcut: faltan las URL institucionales de estos dos vínculos; ponerlas cuando se conozcan. */}
+          <div className="flex flex-col gap-1">
+            <span className={vinculo}>Habilita correo</span>
+            <span className={vinculo}>Cambio de contraseña</span>
+          </div>
+        </div>
+      </Tarjeta>
+      <Tarjeta titulo="Egresados">
+        <div className="flex flex-col gap-3.5 p-5">
+          <p>Si egresaste de la maestría, ingresa con tu correo personal.</p>
+          <Link href="/acceso-egresados" className={vinculo}>Acceso de egresados</Link>
+        </div>
+      </Tarjeta>
+    </div>
   );
 }

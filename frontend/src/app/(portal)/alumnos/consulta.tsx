@@ -1,5 +1,7 @@
 "use client";
 
+import { sesionVencida } from "@/lib/acceso";
+
 import Link from "next/link";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Eye, Search, UserPlus } from "lucide-react";
@@ -66,7 +68,7 @@ export function ConsultaAlumnos() {
 
   useEffect(() => {
     fetch("/api/alumnos").then(async (res) => {
-      if (res.status === 401) window.location.replace("/?sesion=terminada");
+      if (res.status === 401) sesionVencida();
       else if (res.ok) setAlumnos(await res.json());
     });
   }, []);

@@ -1,5 +1,5 @@
 import {
-  Briefcase, ChartColumn, ClipboardList, FileCheck, GraduationCap, Inbox, Network, User, UserCog, Users,
+  Briefcase, ChartColumn, FileCheck, GraduationCap, Inbox, Network, User, UserCog, Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,14 +21,14 @@ const gestion: Item[] = [
   { titulo: "Titulación", icono: GraduationCap, ruta: "/titulacion" },
   {
     titulo: "Comités tutoriales", icono: Network, hijos: [
-      { titulo: "Consulta de comités", ruta: "/comites" },
-      { titulo: "Participación docente", ruta: "/comites/participacion" },
+      { titulo: "Consulta de comités", ruta: "/comites", descripcion: "Comités tutoriales de los alumnos." },
+      { titulo: "Participación docente", ruta: "/comites/participacion", descripcion: "Comités en los que participa cada profesor." },
     ],
   },
   {
     titulo: "Egresados", icono: User, hijos: [
-      { titulo: "Consulta de egresados", ruta: "/egresados" },
-      { titulo: "Alta de egresado", ruta: "/egresados/alta" },
+      { titulo: "Consulta de egresados", ruta: "/egresados", descripcion: "Egresados de la maestría y su situación actual." },
+      { titulo: "Alta de egresado", ruta: "/egresados/alta", descripcion: "Registra a egresados de generaciones anteriores al sistema." },
     ],
   },
   {
@@ -46,9 +46,8 @@ const gestion: Item[] = [
 ];
 
 const profesor: Item[] = [
-  { titulo: "Mis alumnos", icono: Users, ruta: "/profesor/alumnos" },
-  { titulo: "Solicitudes de dirección", icono: Inbox, ruta: "/profesor/solicitudes" },
-  { titulo: "Evaluaciones", icono: ClipboardList, ruta: "/profesor/evaluaciones", descripcion: "Evaluaciones de tus alumnos." },
+  { titulo: "Mis alumnos", icono: Users, ruta: "/profesor/alumnos", descripcion: "Alumnos de los comités en los que participas." },
+  { titulo: "Solicitudes de dirección", icono: Inbox, ruta: "/profesor/solicitudes", descripcion: "Alumnos que te eligieron como director." },
 ];
 
 export const menus: Record<Rol, Seccion[]> = {
@@ -63,10 +62,10 @@ export const menus: Record<Rol, Seccion[]> = {
             { titulo: "Mi trabajo", ruta: "/mi-titulacion", descripcion: "Tu tesis y su avance." },
             { titulo: "Mi comité", ruta: "/mi-titulacion/comite" },
             { titulo: "Mis evaluaciones", ruta: "/mi-titulacion/evaluaciones" },
-            { titulo: "Evidencias", ruta: "/mi-titulacion/evidencias" },
+            { titulo: "Avances", ruta: "/mi-titulacion/avances", descripcion: "Sube tus avances para el siguiente informe." },
           ],
         },
-        { titulo: "Requisito TOEFL", icono: FileCheck, ruta: "/toefl" },
+        { titulo: "TOEFL", icono: FileCheck, ruta: "/toefl", descripcion: "Registra el resultado de tu examen." },
       ],
     },
   ],
@@ -75,8 +74,8 @@ export const menus: Record<Rol, Seccion[]> = {
       items: [
         { titulo: "Mi perfil", icono: User, ruta: "/mi-perfil", descripcion: "Tus datos personales y de contacto." },
         { titulo: "Historial laboral", icono: Briefcase, ruta: "/historial-laboral" },
-        { titulo: "Constancias", icono: FileCheck, ruta: "/constancias" },
-        { titulo: "Comentarios", icono: Inbox, ruta: "/comentarios" },
+        { titulo: "Constancias", icono: FileCheck, ruta: "/constancias", descripcion: "Documentos que respaldan tu situación laboral." },
+        { titulo: "Comentarios", icono: Inbox, ruta: "/comentarios", descripcion: "Ayúdanos a mejorar la maestría." },
       ],
     },
   ],

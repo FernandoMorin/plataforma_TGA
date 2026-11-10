@@ -7,6 +7,7 @@ Seguimiento de alumnos, titulación y egresados de la Maestría en Tecnología y
 |---|---|
 | `backend/` | API en ASP.NET Core (.NET 10, EF Core 10). La base de datos se define aquí, con migraciones |
 | `frontend/` | Interfaz en Next.js 16 (TypeScript y Tailwind) |
+| `database/` | `temporal.sql`: simula el registro de la universidad para importar alumnos (solo desarrollo) |
 
 El navegador solo habla con Next.js; las peticiones a `/api/*` las reenvía Next.js al backend.
 
@@ -97,6 +98,30 @@ Nadie toca la base a mano: los cambios se hacen en el código y se convierten en
 
 3. Revisa el SQL y aplícalo como en el paso 2.4.
 
+### 2.6 Registro de la universidad (para importar alumnos)
+
+Los alumnos no se dan de alta a mano: se importan del registro oficial de la universidad, del que
+la Plataforma **solo lee**. En desarrollo ese registro se simula con el esquema `TEMPORAL`
+(15 estudiantes de ejemplo), al que solo puede leer el usuario `gas_lectura`.
+
+1. Abre `database/temporal.sql`, cambia `<contraseña>` en el `CREATE USER` y córrelo como root.
+   El script borra y vuelve a crear el esquema y el usuario, así que se puede correr las veces que
+   haga falta:
+
+   ```bash
+   mysql -u root -p < database/temporal.sql
+   ```
+
+2. Guarda la cadena de conexión con esa contraseña:
+
+   ```bash
+   dotnet user-secrets set "ConnectionStrings:UniversidadDb" "Server=localhost;Port=3306;Database=TEMPORAL;User=gas_lectura;Password=<contraseña>;" --project backend
+   ```
+
+> El usuario `admin` de la aplicación no tiene ningún permiso sobre `TEMPORAL`, y `gas_lectura`
+> solo puede leer la tabla `estudiante`. Al implantar, se cambia esta cadena de conexión para que
+> apunte a la base real de la universidad; el código no cambia.
+
 ## 3. Backend
 
 ```bash
@@ -106,10 +131,30 @@ dotnet run --launch-profile http
 
 Queda en http://localhost:5015.
 
+### Correo de recuperación de contraseña
+
+En desarrollo no hace falta configurar nada: el enlace de «Restablece contraseña» no se envía, se
+escribe en la consola del backend (busca «MODO DESARROLLO»). Para enviarlo de verdad, configura un
+servidor SMTP autorizado por la universidad:
+
+```bash
+dotnet user-secrets set "Smtp:Host" "<servidor>" --project backend
+dotnet user-secrets set "Smtp:Port" "587" --project backend
+dotnet user-secrets set "Smtp:EnableSsl" "true" --project backend
+dotnet user-secrets set "Smtp:From" "<correo remitente>" --project backend
+dotnet user-secrets set "Smtp:User" "<usuario>" --project backend
+dotnet user-secrets set "Smtp:Password" "<contraseña>" --project backend
+```
+
+Fuera de desarrollo también hay que indicar la dirección pública del sitio, para armar el enlace:
+`dotnet user-secrets set "Seguridad:UrlPublica" "https://<dominio>"`. Sin SMTP, en producción la
+recuperación responde que no está disponible.
+
 ### Cuentas de prueba
 
 En modo desarrollo, la primera vez que arranca con la base sin usuarios, el backend siembra estos
 datos (`backend/Data/SeederDesarrollo.cs`). Todas las cuentas usan la contraseña `Prueba2026!`.
+Los egresados entran por http://localhost:3000/acceso-egresados; los demás, por el login general.
 
 | Correo | Rol | Clave | Nota |
 |---|---|---|---|

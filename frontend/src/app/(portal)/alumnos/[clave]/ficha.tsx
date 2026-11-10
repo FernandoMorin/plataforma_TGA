@@ -1,5 +1,7 @@
 "use client";
 
+import { sesionVencida } from "@/lib/acceso";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -56,7 +58,7 @@ export function FichaAlumno() {
 
   useEffect(() => {
     fetch(`/api/alumnos/${encodeURIComponent(clave)}`).then(async (res) => {
-      if (res.status === 401) window.location.replace("/?sesion=terminada");
+      if (res.status === 401) sesionVencida();
       else if (res.ok) setA(await res.json());
       else setNoExiste(true);
     });

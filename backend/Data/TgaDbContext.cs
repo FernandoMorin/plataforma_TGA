@@ -1144,9 +1144,6 @@ public partial class TgaDbContext : DbContext
                 .HasComment("Queda fijada al aceptarse la solicitud")
                 .HasColumnName("id_modalidad");
             entity.Property(e => e.IdPrograma).HasColumnName("id_programa");
-            entity.Property(e => e.LineaInvestigacion)
-                .HasMaxLength(255)
-                .HasColumnName("linea_investigacion");
             entity.Property(e => e.MotivoRechazo)
                 .HasMaxLength(255)
                 .HasColumnName("motivo_rechazo");

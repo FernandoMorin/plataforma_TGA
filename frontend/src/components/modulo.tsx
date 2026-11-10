@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Info, TriangleAlert } from "lucide-react";
 
 // Componentes de módulo de Figma (página Alumnos, sección «Componentes de módulo»).
 
@@ -9,6 +9,7 @@ const tonos = {
   verde: "bg-portal-exito-fondo text-portal-exito-texto",
   azul: "bg-portal-activo-fondo text-portal-activo",
   ambar: "bg-portal-advertencia-fondo text-portal-advertencia-texto",
+  naranja: "bg-portal-naranja-fondo text-portal-naranja-texto",
   rojo: "bg-portal-error-fondo text-portal-error-texto",
   gris: "bg-portal-neutro-fondo text-portal-subtexto",
 };
@@ -110,7 +111,7 @@ export function Casilla({ marcada }: { marcada: boolean }) {
 // Abre y cierra un desplegable: se cierra al hacer clic fuera o con Escape, y se abre hacia la
 // izquierda si hacia la derecha no cabe en la pantalla.
 const ANCHO_DESPLEGABLE = 270;
-function useDesplegable() {
+export function useDesplegable() {
   const [abierto, setAbierto] = useState(false);
   const [lado, setLado] = useState("left-0");
   const caja = useRef<HTMLDivElement>(null);
@@ -195,6 +196,51 @@ export function FiltroMultiple({ etiqueta, titulo, opciones, seleccion, onAplica
   );
 }
 
+// Alerta del portal (Figma, componente «Alerta» 13:535 y «Aviso del portal» 8:557): con ícono.
+const alertas = {
+  advertencia: { icono: TriangleAlert, estilo: "border-portal-advertencia-borde bg-portal-advertencia-fondo text-portal-advertencia-texto" },
+  error: { icono: TriangleAlert, estilo: "border-portal-error-texto/25 bg-portal-error-fondo text-portal-error-texto" },
+  exito: { icono: CircleCheck, estilo: "border-portal-exito-borde bg-portal-exito-fondo text-portal-exito-texto" },
+  info: { icono: Info, estilo: "border-portal-info-borde bg-portal-info-fondo text-portal-activo" },
+};
+
+export function Alerta({ tipo, children }: { tipo: keyof typeof alertas; children: ReactNode }) {
+  const { icono: Icono, estilo } = alertas[tipo];
+  return (
+    <div
+      role={tipo === "advertencia" || tipo === "error" ? "alert" : "status"}
+      className={`flex items-start gap-3 rounded-lg border px-4 py-3.5 text-sm ${estilo}`}
+    >
+      <Icono size={20} className="shrink-0" aria-hidden />
+      <div className="flex-1">{children}</div>
+    </div>
+  );
+}
+
+// Pasos de un asistente (Figma, componente «Paso» 13:511): completos en verde, el actual en azul.
+export function Pasos({ pasos, actual }: { pasos: string[]; actual: number }) {
+  return (
+    <ol className="flex items-center gap-3.5">
+      {pasos.map((texto, i) => {
+        const estado = i < actual ? "completo" : i === actual ? "actual" : "pendiente";
+        return (
+          <li key={texto} className={`flex items-center gap-3.5 ${i < pasos.length - 1 ? "flex-1" : ""}`} aria-current={estado === "actual" ? "step" : undefined}>
+            <span className="flex shrink-0 items-center gap-2.5">
+              <span
+                className={`flex size-[30px] items-center justify-center rounded-full text-sm font-bold ${estado === "completo" ? "bg-portal-exito-texto text-blanco" : estado === "actual" ? "bg-portal-activo text-blanco" : "border-[1.5px] border-portal-borde-campo bg-blanco text-portal-subtexto"}`}
+              >
+                {estado === "completo" ? <Check size={16} strokeWidth={3} aria-label="Completo" /> : i + 1}
+              </span>
+              <span className={`text-[15px] ${estado === "actual" ? "font-semibold text-portal-titulo" : estado === "completo" ? "font-medium text-portal-titulo" : "font-medium text-portal-subtexto"}`}>{texto}</span>
+            </span>
+            {i < pasos.length - 1 && <span className={`h-0.5 flex-1 ${i < actual ? "bg-portal-exito-texto" : "bg-portal-borde-campo"}`} aria-hidden />}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 // Diálogo modal (Figma F5-F7) sobre <dialog>: fondo, foco atrapado y Escape los da el navegador.
 // El contenido solo existe mientras está abierto, así cada apertura empieza con el formulario limpio.
 export function Dialogo({ abierto, onCerrar, titulo, subtitulo, ancho, children }: {
@@ -241,12 +287,23 @@ export function CampoPortal({ etiqueta, ...input }: { etiqueta: string } & Compo
   );
 }
 
+// Área de texto (Figma 31:841).
+export function AreaTexto({ etiqueta, ...area }: { etiqueta: string } & ComponentProps<"textarea">) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold text-portal-menu-texto">{etiqueta}</span>
+      <textarea className={`${cajaCampo} h-[110px] resize-none`} {...area} />
+    </label>
+  );
+}
+
 export function SelectorPortal({ etiqueta, children, ...select }: { etiqueta: string } & ComponentProps<"select">) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-semibold text-portal-menu-texto">{etiqueta}</span>
       <span className="relative">
-        <select className={`${cajaCampo} h-[42px] appearance-none pr-9`} {...select}>{children}</select>
+        {/* Sin elegir (opción de valor vacío), el texto va en gris como el estado «Vacío» de Figma. */}
+        <select className={`${cajaCampo} h-[42px] appearance-none pr-9 has-[option[value='']:checked]:text-portal-placeholder [&_option]:text-portal-titulo`} {...select}>{children}</select>
         <ChevronDown size={18} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-portal-subtexto" aria-hidden />
       </span>
     </label>

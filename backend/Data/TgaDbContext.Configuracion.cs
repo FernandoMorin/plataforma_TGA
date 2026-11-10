@@ -29,13 +29,22 @@ public static class EstadoToefl
 
 public static class EstadoTesis
 {
-    public const int Aceptada = 4, Cancelada = 5;
+    public const int SinIniciar = 1, EnProgreso = 2, EnEvaluacion = 3, Aceptada = 4, Cancelada = 5;
+}
+
+public static class RolComite
+{
+    public const int Director = 1, Codirector = 2, Sinodal = 3;
 }
 
 // Lo que el scaffolding no trae: llaves naturales, CHECK y catálogos.
 // TgaDbContext.cs queda como lo generó EF; los cambios al modelo van aquí o en las entidades.
 public partial class TgaDbContext
 {
+    public virtual DbSet<CatLineaInvestigacion> CatLineaInvestigacion { get; set; }
+
+    public virtual DbSet<ComiteHistorial> ComiteHistorial { get; set; }
+
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
     {
         // Las asigna la universidad; sin esto EF las crea AUTO_INCREMENT.
@@ -46,6 +55,8 @@ public partial class TgaDbContext
         modelBuilder.Entity<Alumno>().Property(e => e.PendienteConciliar).HasDefaultValue(false);
         modelBuilder.Entity<Documento>().Property(e => e.Verificado).HasDefaultValue(false);
         modelBuilder.Entity<ProfesorDetalle>().Property(e => e.Externo).HasDefaultValue(false);
+        // Baja lógica del egresado (decidido el 9 de noviembre de 2026).
+        modelBuilder.Entity<Egresado>().Property(e => e.Activo).HasDefaultValue(true).HasColumnName("activo");
 
         modelBuilder.Entity<Tesis>().ToTable(t => t.HasCheckConstraint("ck_tesis_solicitud",
             "estado_solicitud IN ('Pendiente', 'Aceptada', 'Rechazada')"));
@@ -55,8 +66,50 @@ public partial class TgaDbContext
                 "estado IN ('Abierta', 'En consolidación', 'En firma', 'Cerrada')");
             t.HasCheckConstraint("ck_revision_calif", Calif0a100);
         });
+        // D10: un informe por periodo.
+        modelBuilder.Entity<Revision>().HasIndex(r => new { r.IdTesis, r.IdPeriodo }).IsUnique().HasDatabaseName("uq_revision_periodo");
         modelBuilder.Entity<RevisionProfesor>().ToTable(t => t.HasCheckConstraint("ck_revprof_calif", Calif0a100));
         modelBuilder.Entity<Empleo>().ToTable(t => t.HasCheckConstraint("ck_empleo_tipo", "tipo IN ('Empleo', 'Beca', 'Otro')"));
+
+        // Historial exacto del comité: un registro por cambio, en el orden en que se hicieron.
+        modelBuilder.Entity<ComiteHistorial>(e =>
+        {
+            e.ToTable("comite_historial", t => t.HasCheckConstraint("ck_historial_accion", "accion IN ('Alta', 'Baja', 'Reemplazo', 'Cambio de rol')"));
+            e.HasKey(x => x.IdHistorial).HasName("PRIMARY");
+            e.Property(x => x.IdHistorial).HasColumnName("id_historial");
+            e.Property(x => x.IdComite).HasColumnName("id_comite");
+            e.Property(x => x.Fecha).HasColumnType("date").HasColumnName("fecha");
+            e.Property(x => x.Accion).HasMaxLength(20).HasColumnName("accion");
+            e.Property(x => x.RpeSale).HasMaxLength(10).HasColumnName("rpe_sale");
+            e.Property(x => x.RpeEntra).HasMaxLength(10).HasColumnName("rpe_entra");
+            e.Property(x => x.RolAnterior).HasColumnName("rol_anterior");
+            e.Property(x => x.RolNuevo).HasColumnName("rol_nuevo");
+            e.Property(x => x.IdUsuario).HasColumnName("id_usuario");
+            e.Property(x => x.FechaRegistro).HasColumnType("datetime").HasColumnName("fecha_registro");
+            e.HasOne(x => x.IdComiteNavigation).WithMany().HasForeignKey(x => x.IdComite).HasConstraintName("fk_historial_comite");
+            e.HasOne<Profesor>().WithMany().HasForeignKey(x => x.RpeSale).HasConstraintName("fk_historial_sale");
+            e.HasOne<Profesor>().WithMany().HasForeignKey(x => x.RpeEntra).HasConstraintName("fk_historial_entra");
+            e.HasOne<CatRolComite>().WithMany().HasForeignKey(x => x.RolAnterior).HasConstraintName("fk_historial_rol_anterior");
+            e.HasOne<CatRolComite>().WithMany().HasForeignKey(x => x.RolNuevo).HasConstraintName("fk_historial_rol_nuevo");
+            e.HasOne<Usuario>().WithMany().HasForeignKey(x => x.IdUsuario).HasConstraintName("fk_historial_usuario");
+        });
+
+        // D9: la línea de investigación es catálogo; reemplaza a tesis.linea_investigacion (texto).
+        modelBuilder.Entity<CatLineaInvestigacion>(e =>
+        {
+            e.ToTable("CAT_linea_investigacion");
+            e.HasKey(x => x.IdLineaInvestigacion).HasName("PRIMARY");
+            e.Property(x => x.IdLineaInvestigacion).HasColumnName("id_linea_investigacion");
+            e.Property(x => x.Nombre).HasMaxLength(150).HasColumnName("nombre");
+            e.Property(x => x.Activo).HasDefaultValue(true).HasColumnName("activo");
+            e.HasData(new CatLineaInvestigacion { IdLineaInvestigacion = 1, Nombre = "Tecnología y gestión del agua", Activo = true });
+        });
+        modelBuilder.Entity<Tesis>(e =>
+        {
+            e.Property(x => x.IdLineaInvestigacion).HasColumnName("id_linea_investigacion");
+            e.HasOne(x => x.IdLineaInvestigacionNavigation).WithMany(l => l.Tesis)
+                .HasForeignKey(x => x.IdLineaInvestigacion).HasConstraintName("fk_tesis_linea");
+        });
 
         SembrarCatalogos(modelBuilder);
     }
@@ -132,6 +185,7 @@ public partial class TgaDbContext
 
         modelBuilder.Entity<CatFormatoReporte>().HasData(
             new CatFormatoReporte { IdFormatoReporte = 1, Nombre = "PDF" },
-            new CatFormatoReporte { IdFormatoReporte = 2, Nombre = "Excel" });
+            new CatFormatoReporte { IdFormatoReporte = 2, Nombre = "Excel" },
+            new CatFormatoReporte { IdFormatoReporte = 3, Nombre = "Imagen" });
     }
 }

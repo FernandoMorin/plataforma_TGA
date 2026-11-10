@@ -453,6 +453,44 @@ namespace PlataformaTGA.Data.Migraciones
                         {
                             IdFormatoReporte = 2,
                             Nombre = "Excel"
+                        },
+                        new
+                        {
+                            IdFormatoReporte = 3,
+                            Nombre = "Imagen"
+                        });
+                });
+
+            modelBuilder.Entity("PlataformaTGA.Models.CatLineaInvestigacion", b =>
+                {
+                    b.Property<int>("IdLineaInvestigacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id_linea_investigacion");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true)
+                        .HasColumnName("activo");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("nombre");
+
+                    b.HasKey("IdLineaInvestigacion")
+                        .HasName("PRIMARY");
+
+                    b.ToTable("CAT_linea_investigacion", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            IdLineaInvestigacion = 1,
+                            Activo = true,
+                            Nombre = "Tecnología y gestión del agua"
                         });
                 });
 
@@ -855,6 +893,74 @@ namespace PlataformaTGA.Data.Migraciones
                     b.ToTable("comite", (string)null);
                 });
 
+            modelBuilder.Entity("PlataformaTGA.Models.ComiteHistorial", b =>
+                {
+                    b.Property<int>("IdHistorial")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id_historial");
+
+                    b.Property<string>("Accion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("accion");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("date")
+                        .HasColumnName("fecha");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime")
+                        .HasColumnName("fecha_registro");
+
+                    b.Property<int>("IdComite")
+                        .HasColumnType("int")
+                        .HasColumnName("id_comite");
+
+                    b.Property<int?>("IdUsuario")
+                        .HasColumnType("int")
+                        .HasColumnName("id_usuario");
+
+                    b.Property<int?>("RolAnterior")
+                        .HasColumnType("int")
+                        .HasColumnName("rol_anterior");
+
+                    b.Property<int?>("RolNuevo")
+                        .HasColumnType("int")
+                        .HasColumnName("rol_nuevo");
+
+                    b.Property<string>("RpeEntra")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("rpe_entra");
+
+                    b.Property<string>("RpeSale")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("rpe_sale");
+
+                    b.HasKey("IdHistorial")
+                        .HasName("PRIMARY");
+
+                    b.HasIndex("IdComite");
+
+                    b.HasIndex("IdUsuario");
+
+                    b.HasIndex("RolAnterior");
+
+                    b.HasIndex("RolNuevo");
+
+                    b.HasIndex("RpeEntra");
+
+                    b.HasIndex("RpeSale");
+
+                    b.ToTable("comite_historial", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_historial_accion", "accion IN ('Alta', 'Baja', 'Reemplazo', 'Cambio de rol')");
+                        });
+                });
+
             modelBuilder.Entity("PlataformaTGA.Models.ComiteProfesor", b =>
                 {
                     b.Property<int>("IdComiteProfesor")
@@ -1028,6 +1134,12 @@ namespace PlataformaTGA.Data.Migraciones
                     b.Property<int>("ClaveAlumno")
                         .HasColumnType("int")
                         .HasColumnName("clave_alumno");
+
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true)
+                        .HasColumnName("activo");
 
                     b.Property<string>("Ciudad")
                         .HasMaxLength(100)
@@ -1543,6 +1655,10 @@ namespace PlataformaTGA.Data.Migraciones
                     b.HasKey("IdRevision")
                         .HasName("PRIMARY");
 
+                    b.HasIndex("IdTesis", "IdPeriodo")
+                        .IsUnique()
+                        .HasDatabaseName("uq_revision_periodo");
+
                     b.HasIndex(new[] { "IdPeriodo" }, "fk_revision_periodo");
 
                     b.HasIndex(new[] { "IdTesis" }, "fk_revision_tesis");
@@ -1693,6 +1809,10 @@ namespace PlataformaTGA.Data.Migraciones
                         .HasColumnType("int")
                         .HasColumnName("id_estado_tesis");
 
+                    b.Property<int?>("IdLineaInvestigacion")
+                        .HasColumnType("int")
+                        .HasColumnName("id_linea_investigacion");
+
                     b.Property<int?>("IdModalidad")
                         .HasColumnType("int")
                         .HasColumnName("id_modalidad")
@@ -1701,11 +1821,6 @@ namespace PlataformaTGA.Data.Migraciones
                     b.Property<int?>("IdPrograma")
                         .HasColumnType("int")
                         .HasColumnName("id_programa");
-
-                    b.Property<string>("LineaInvestigacion")
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)")
-                        .HasColumnName("linea_investigacion");
 
                     b.Property<string>("MotivoRechazo")
                         .HasMaxLength(255)
@@ -1733,6 +1848,8 @@ namespace PlataformaTGA.Data.Migraciones
 
                     b.HasKey("IdTesis")
                         .HasName("PRIMARY");
+
+                    b.HasIndex("IdLineaInvestigacion");
 
                     b.HasIndex(new[] { "CveActaResolucion" }, "fk_tesis_acta_resolucion");
 
@@ -1982,6 +2099,43 @@ namespace PlataformaTGA.Data.Migraciones
                         .HasConstraintName("fk_comite_tesis");
 
                     b.Navigation("IdTesisNavigation");
+                });
+
+            modelBuilder.Entity("PlataformaTGA.Models.ComiteHistorial", b =>
+                {
+                    b.HasOne("PlataformaTGA.Models.Comite", "IdComiteNavigation")
+                        .WithMany()
+                        .HasForeignKey("IdComite")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_historial_comite");
+
+                    b.HasOne("PlataformaTGA.Models.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("IdUsuario")
+                        .HasConstraintName("fk_historial_usuario");
+
+                    b.HasOne("PlataformaTGA.Models.CatRolComite", null)
+                        .WithMany()
+                        .HasForeignKey("RolAnterior")
+                        .HasConstraintName("fk_historial_rol_anterior");
+
+                    b.HasOne("PlataformaTGA.Models.CatRolComite", null)
+                        .WithMany()
+                        .HasForeignKey("RolNuevo")
+                        .HasConstraintName("fk_historial_rol_nuevo");
+
+                    b.HasOne("PlataformaTGA.Models.Profesor", null)
+                        .WithMany()
+                        .HasForeignKey("RpeEntra")
+                        .HasConstraintName("fk_historial_entra");
+
+                    b.HasOne("PlataformaTGA.Models.Profesor", null)
+                        .WithMany()
+                        .HasForeignKey("RpeSale")
+                        .HasConstraintName("fk_historial_sale");
+
+                    b.Navigation("IdComiteNavigation");
                 });
 
             modelBuilder.Entity("PlataformaTGA.Models.ComiteProfesor", b =>
@@ -2272,6 +2426,11 @@ namespace PlataformaTGA.Data.Migraciones
                         .HasForeignKey("IdEstadoTesis")
                         .HasConstraintName("fk_tesis_estado");
 
+                    b.HasOne("PlataformaTGA.Models.CatLineaInvestigacion", "IdLineaInvestigacionNavigation")
+                        .WithMany("Tesis")
+                        .HasForeignKey("IdLineaInvestigacion")
+                        .HasConstraintName("fk_tesis_linea");
+
                     b.HasOne("PlataformaTGA.Models.CatModalidadTitulacion", "IdModalidadNavigation")
                         .WithMany("Tesis")
                         .HasForeignKey("IdModalidad")
@@ -2292,6 +2451,8 @@ namespace PlataformaTGA.Data.Migraciones
                     b.Navigation("CveActaResolucionNavigation");
 
                     b.Navigation("IdEstadoTesisNavigation");
+
+                    b.Navigation("IdLineaInvestigacionNavigation");
 
                     b.Navigation("IdModalidadNavigation");
 
@@ -2366,6 +2527,11 @@ namespace PlataformaTGA.Data.Migraciones
             modelBuilder.Entity("PlataformaTGA.Models.CatFormatoReporte", b =>
                 {
                     b.Navigation("Reporte");
+                });
+
+            modelBuilder.Entity("PlataformaTGA.Models.CatLineaInvestigacion", b =>
+                {
+                    b.Navigation("Tesis");
                 });
 
             modelBuilder.Entity("PlataformaTGA.Models.CatModalidadTitulacion", b =>

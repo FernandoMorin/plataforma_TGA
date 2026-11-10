@@ -1,5 +1,7 @@
 "use client";
 
+import { sesionVencida } from "@/lib/acceso";
+
 import { useEffect, useState, type ReactNode } from "react";
 import { Download } from "lucide-react";
 import { Dato, Insignia, TarjetaPortal, type Tono } from "@/components/modulo";
@@ -16,7 +18,7 @@ function useDatos<T>(ruta: string) {
   const [datos, setDatos] = useState<T | null>(null);
   useEffect(() => {
     fetch(ruta).then(async (res) => {
-      if (res.status === 401) window.location.replace("/?sesion=terminada");
+      if (res.status === 401) sesionVencida();
       else if (res.ok) setDatos(await res.json());
     });
   }, [ruta]);

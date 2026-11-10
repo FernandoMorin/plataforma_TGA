@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Los PDF llegan hasta 10 MB más el sobre del formulario; el backend es quien rechaza lo que sobra.
+  experimental: { proxyClientMaxBodySize: "11mb" },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

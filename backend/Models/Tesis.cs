@@ -19,7 +19,9 @@ public partial class Tesis
 
     public DateTime? FechaRegistro { get; set; }
 
-    public string? LineaInvestigacion { get; set; }
+    public int? IdLineaInvestigacion { get; set; }
+
+    public virtual CatLineaInvestigacion? IdLineaInvestigacionNavigation { get; set; }
 
     /// <summary>
     /// Queda fijada al aceptarse la solicitud

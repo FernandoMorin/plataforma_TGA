@@ -271,7 +271,7 @@ public class AlumnosController(TgaDbContext db) : ControllerBase
         generaciones = await db.Generacion.AsNoTracking().OrderByDescending(g => g.AnioIngreso)
             .Select(g => new { id = g.IdGeneracion, nombre = g.NombreGeneracion }).ToListAsync(),
         periodos = await db.PeriodoAcademico.AsNoTracking().OrderByDescending(p => p.FechaInicio)
-            .Select(p => new { id = p.IdPeriodo, nombre = p.Nombre }).ToListAsync(),
+            .Select(p => new { id = p.IdPeriodo, nombre = p.Nombre, fechaInicio = p.FechaInicio }).ToListAsync(),
         modalidades = await db.CatModalidadTitulacion.AsNoTracking().Where(m => m.Activo == true).OrderBy(m => m.IdModalidad)
             .Select(m => new { id = m.IdModalidad, nombre = m.Nombre }).ToListAsync(),
         estados = await db.CatEstadoAcademico.AsNoTracking().OrderBy(e => e.IdEstadoAcademico)

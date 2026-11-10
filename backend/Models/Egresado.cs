@@ -29,6 +29,11 @@ public partial class Egresado
 
     public DateTime? UltimaActualizacion { get; set; }
 
+    /// <summary>
+    /// Baja lógica (RF-02.6): false = dado de baja, sin borrar su información
+    /// </summary>
+    public bool Activo { get; set; } = true;
+
     public virtual Alumno ClaveAlumnoNavigation { get; set; } = null!;
 
     public virtual ICollection<Empleo> Empleo { get; set; } = new List<Empleo>();

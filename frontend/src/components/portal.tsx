@@ -6,12 +6,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, CircleUserRound, KeyRound, LogOut } from "lucide-react";
 import { inicio, menus, miCuenta, pagina, paginaDe, type Item, type Rol } from "@/lib/menu";
+import { CompletarDatos, PrimerAcceso } from "@/components/cuenta";
+import { irAlLogin, sesionVencida } from "@/lib/acceso";
 
-type Yo = { nombre: string; rol: Rol; inactividadMinutos: number };
+type Yo = { nombre: string; rol: Rol; inactividadMinutos: number; requiereCambio: boolean; completarDatos: boolean };
 
 // Recarga completa al salir: con cacheComponents, el router dejaría en memoria las páginas del usuario.
 const irA = (ruta: string) => window.location.replace(ruta);
-const sesionTerminada = () => irA("/?sesion=terminada");
 
 // Marco de todos los portales (Figma, página Esqueleto): encabezado, menú lateral y control de sesión.
 export function MarcoPortal({ children }: { children: ReactNode }) {
@@ -20,7 +21,7 @@ export function MarcoPortal({ children }: { children: ReactNode }) {
   const [yo, setYo] = useState<Yo | null>(null);
 
   useEffect(() => {
-    fetch("/api/auth/me").then(async (res) => (res.ok ? setYo(await res.json()) : sesionTerminada()));
+    fetch("/api/auth/me").then(async (res) => (res.ok ? setYo(await res.json()) : sesionVencida()));
   }, []);
 
   // Cada rol solo entra a sus páginas; cualquier otra lo manda a su inicio.
@@ -32,13 +33,23 @@ export function MarcoPortal({ children }: { children: ReactNode }) {
 
   useInactividad(yo?.inactividadMinutos);
 
-  if (!yo || !permitida) return null;
+  if (!yo) return null;
+  // Primer acceso (P1) y segundo acceso del alumno (P3): solo esa tarjeta, sin menú, en cualquier ruta.
+  if (yo.requiereCambio || yo.completarDatos)
+    return (
+      <div className="flex min-h-screen flex-col bg-portal-tabla-cabecera">
+        <EncabezadoPortal yo={yo} />
+        {yo.requiereCambio ? <PrimerAcceso onSalir={salir} /> : <CompletarDatos onListo={() => irA(inicio(yo.rol))} />}
+      </div>
+    );
+  if (!permitida) return null;
   return (
     <div className="flex min-h-screen flex-col bg-blanco">
       <EncabezadoPortal yo={yo} />
       <div className="flex flex-1">
         <MenuLateral rol={yo.rol} ruta={entrada.ruta} />
-        <main className="flex flex-1 flex-col gap-5 px-8 pt-7 pb-8">{children}</main>
+        {/* min-w-0: sin él, un texto largo de una página ensancha el área de contenido más allá de la ventana. */}
+        <main className="flex min-w-0 flex-1 flex-col gap-5 px-8 pt-7 pb-8">{children}</main>
       </div>
     </div>
   );
@@ -49,14 +60,14 @@ export function MarcoPortal({ children }: { children: ReactNode }) {
 function useInactividad(minutos: number | undefined) {
   useEffect(() => {
     if (!minutos) return;
-    let vence = setTimeout(sesionTerminada, minutos * 60_000);
+    let vence = setTimeout(sesionVencida, minutos * 60_000);
     let ultimoAviso = Date.now();
     const actividad = () => {
       clearTimeout(vence);
-      vence = setTimeout(sesionTerminada, minutos * 60_000);
+      vence = setTimeout(sesionVencida, minutos * 60_000);
       if (Date.now() - ultimoAviso < 60_000) return;
       ultimoAviso = Date.now();
-      fetch("/api/auth/actividad", { method: "POST" }).then((res) => res.status === 401 && sesionTerminada());
+      fetch("/api/auth/actividad", { method: "POST" }).then((res) => res.status === 401 && sesionVencida());
     };
     const eventos = ["pointerdown", "keydown", "scroll"] as const;
     eventos.forEach((e) => window.addEventListener(e, actividad, { passive: true }));
@@ -92,12 +103,12 @@ function EncabezadoPortal({ yo }: { yo: Yo }) {
 
 const fila = "flex w-full items-center gap-3.5 rounded-lg py-3 pr-3 pl-3.5 text-left";
 
-function MenuLateral({ rol, ruta }: { rol: Rol; ruta: string }) {
-  async function salir() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    irA("/");
-  }
+async function salir() {
+  await fetch("/api/auth/logout", { method: "POST" });
+  irAlLogin();
+}
 
+function MenuLateral({ rol, ruta }: { rol: Rol; ruta: string }) {
   return (
     <nav className="flex w-[270px] shrink-0 flex-col justify-between border-r border-portal-borde px-3.5 py-6">
       <ul className="flex flex-col gap-1.5">
@@ -114,13 +125,15 @@ function MenuLateral({ rol, ruta }: { rol: Rol; ruta: string }) {
           </li>
         ))}
       </ul>
-      <div className="flex flex-col gap-1.5 border-t border-portal-borde pt-1.5">
+      <ul className="flex flex-col gap-1.5 border-t border-portal-borde pt-1.5">
         <ItemMenu item={{ ...miCuenta, icono: KeyRound }} ruta={ruta} />
-        <button onClick={salir} className={`${fila} font-medium text-portal-menu-texto`}>
-          <LogOut size={24} className="text-portal-salir" aria-hidden />
-          Cerrar sesión
-        </button>
-      </div>
+        <li>
+          <button onClick={salir} className={`${fila} font-medium text-portal-menu-texto`}>
+            <LogOut size={24} className="text-portal-salir" aria-hidden />
+            Cerrar sesión
+          </button>
+        </li>
+      </ul>
     </nav>
   );
 }
