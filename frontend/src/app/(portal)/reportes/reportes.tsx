@@ -18,7 +18,7 @@ type Datos = {
     porGeneracion?: { generacion: string; activos: number; inactivos: number; egresados: number; baja: number; enTiempo: number; enCurso: boolean }[];
     rangos?: { etiqueta: string; cantidad: number }[];
     situaciones?: { etiqueta: string; cantidad: number }[];
-    alumnos?: { alumno: string; modalidad: string; avance: number; esperado: number | null; evaluaciones: number; rezago: string; extra: number; tiempo: string }[];
+    alumnos?: { alumno: string; modalidad: string; avance: number; esperado: number | null; evaluaciones: number; rezago: string; extra: number; tiempo: string; titulacion: string; comite: string[] }[];
     modalidades?: Opcion[];
     estados?: Opcion[];
   };
@@ -350,14 +350,15 @@ function TablaAvance({ alumnos }: { alumnos: NonNullable<Datos["grafica"]["alumn
     <div className="overflow-hidden rounded-[10px] border border-portal-borde">
       <table className="w-full text-left">
         <thead className="bg-portal-tabla-cabecera text-[13px] text-portal-subtexto">
-          <tr>{["Alumno", "Modalidad", "Avance", "Evaluaciones", "Rezago por avance", "Tiempo"].map((c) => <th key={c} className="px-4 py-2.5 font-semibold">{c}</th>)}</tr>
+          <tr>{["Alumno", "Modalidad", "Estado de titulación", "Avance", "Evaluaciones", "Rezago por avance", "Tiempo", "Comité tutorial"].map((c) => <th key={c} className="px-4 py-2.5 font-semibold">{c}</th>)}</tr>
         </thead>
         <tbody className="text-sm text-portal-menu-texto">
-          {alumnos.length === 0 && <tr className="border-t border-portal-borde"><td colSpan={6} className="px-4 py-2.5 text-portal-placeholder">Ningún registro coincide con los filtros.</td></tr>}
+          {alumnos.length === 0 && <tr className="border-t border-portal-borde"><td colSpan={8} className="px-4 py-2.5 text-portal-placeholder">Ningún registro coincide con los filtros.</td></tr>}
           {alumnos.map((a) => (
             <tr key={a.alumno} className="border-t border-portal-borde">
               <td className="px-4 py-2.5 font-semibold text-portal-titulo">{a.alumno}</td>
               <td className="px-4">{a.modalidad}</td>
+              <td className="px-4">{a.titulacion}</td>
               <td className="px-4">
                 <span className="flex items-center gap-2">
                   <span className="relative h-1.5 w-[122px] rounded-[3px] bg-portal-neutro-fondo" role="progressbar" aria-valuenow={Math.round(a.avance)} aria-valuemin={0} aria-valuemax={100}
@@ -371,6 +372,10 @@ function TablaAvance({ alumnos }: { alumnos: NonNullable<Datos["grafica"]["alumn
               <td className="px-4">{a.evaluaciones}</td>
               <td className="px-4">{a.rezago === "En rezago" ? <Insignia tono="rojo">En rezago</Insignia> : <span className="text-portal-placeholder">—</span>}</td>
               <td className="px-4">{a.extra > 0 ? <Insignia tono={tonoTiempo[Math.min(a.extra, 3)]}>{a.tiempo}</Insignia> : <span className="text-portal-subtexto">{a.tiempo}</span>}</td>
+              <td className="px-4 py-2.5">
+                {a.comite.length === 0 ? <span className="text-portal-placeholder">Sin comité</span>
+                  : a.comite.map((m) => <span key={m} className="block text-[13px]">{m}</span>)}
+              </td>
             </tr>
           ))}
         </tbody>

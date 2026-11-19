@@ -1,6 +1,8 @@
 # .NET
 backend/bin/
 backend/obj/
+pruebas/bin/
+pruebas/obj/
 
 # IDE
 .vs/

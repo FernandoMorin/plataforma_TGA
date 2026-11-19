@@ -174,7 +174,19 @@ public static class Reportes
                     Semestre = a.AlumnoDetalle.OrderByDescending(d => d.IdPeriodoNavigation.FechaInicio).Select(d => d.Semestre).FirstOrDefault(),
                     Avance = a.Tesis.Where(t => t.EstadoSolicitud == "Aceptada").OrderByDescending(t => t.IdTesis).Select(t => t.PorcentajeActual).FirstOrDefault(),
                     Evaluaciones = a.Tesis.Where(t => t.EstadoSolicitud == "Aceptada").SelectMany(t => t.Revision).Count(r => r.Estado == "Cerrada"),
+                    // Igual que la consulta de alumnos: el trabajo aceptado o, si no hay, la solicitud pendiente.
+                    Trabajo = a.Tesis.Where(t => t.EstadoSolicitud != "Rechazada")
+                        .OrderByDescending(t => t.EstadoSolicitud == "Aceptada").ThenByDescending(t => t.IdTesis)
+                        .Select(t => new { t.IdTesis, t.EstadoSolicitud, Estado = t.IdEstadoTesisNavigation!.Nombre })
+                        .FirstOrDefault(),
                 }).ToListAsync();
+                var idsTesis = alumnos.Where(a => a.Trabajo?.EstadoSolicitud == "Aceptada").Select(a => a.Trabajo!.IdTesis).ToList();
+                var comites = (await Titulacion.MiembrosVigentes(db).AsNoTracking().Where(m => idsTesis.Contains(m.IdComiteNavigation.IdTesis))
+                        .OrderBy(m => m.IdRolComite).ThenBy(m => m.IdComiteProfesor)
+                        .Select(m => new { m.IdComiteNavigation.IdTesis, Rol = m.IdRolComiteNavigation.Nombre, m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno })
+                        .ToListAsync())
+                    .GroupBy(m => m.IdTesis)
+                    .ToDictionary(g => g.Key, g => g.Select(m => $"{m.Rol}: {Titulacion.NombreCompleto(m.Nombre, m.ApellidoPaterno, m.ApellidoMaterno)}").ToList());
                 var filas = alumnos
                     .Where(a => (f.Modalidades is not { Count: > 0 } || f.Modalidades.Contains(a.Modalidad ?? "Sin asignar"))
                         && (f.Estados is not { Count: > 0 } || f.Estados.Contains(a.Estado ?? "")))
@@ -190,6 +202,10 @@ public static class Reportes
                             avance, esperado = a.Semestre is int sem ? AlumnosController.AvanceEsperado(sem) : (decimal?)null,
                             evaluaciones = a.Evaluaciones, rezago, extra,
                             tiempo = extra == 0 ? "En tiempo" : $"+{Math.Min(extra, 3)} semestre{(extra > 1 ? "s" : "")}",
+                            titulacion = a.Trabajo is null ? "Sin trabajo registrado"
+                                : a.Trabajo.EstadoSolicitud == "Pendiente" ? "Solicitud pendiente"
+                                : a.Trabajo.Estado ?? "Sin iniciar",
+                            comite = a.Trabajo is { EstadoSolicitud: "Aceptada" } && comites.TryGetValue(a.Trabajo.IdTesis, out var c) ? c : [],
                         };
                     }).OrderBy(x => x.alumno).ToList();
                 var aplican = filas.Where(x => x.rezago != "No aplica").ToList();
@@ -205,9 +221,9 @@ public static class Reportes
                         new("Fuera de tiempo", fuera.Count.ToString(), fuera.Count == 0 ? null : string.Join(" · ", fuera.GroupBy(x => x.tiempo).OrderBy(g => g.Key).Select(g => $"{g.Key}: {g.Count()}"))),
                         new("Evaluaciones cerradas", filas.Sum(x => x.evaluaciones).ToString()),
                     ],
-                    new TablaReporte(["Alumno", "Modalidad", "Avance", "Esperado", "Evaluaciones", "Rezago por avance", "Tiempo"],
-                        filas.Select(x => new[] { x.alumno, x.modalidad, $"{Math.Round(x.avance)} %", x.esperado is null ? "—" : $"{Math.Round(x.esperado.Value)} %",
-                            $"{x.evaluaciones}", x.rezago, x.tiempo }).ToList()),
+                    new TablaReporte(["Alumno", "Modalidad", "Estado de titulación", "Avance", "Esperado", "Evaluaciones", "Rezago por avance", "Tiempo", "Comité tutorial"],
+                        filas.Select(x => new[] { x.alumno, x.modalidad, x.titulacion, $"{Math.Round(x.avance)} %", x.esperado is null ? "—" : $"{Math.Round(x.esperado.Value)} %",
+                            $"{x.evaluaciones}", x.rezago, x.tiempo, x.comite.Count == 0 ? "Sin comité" : string.Join("; ", x.comite) }).ToList()),
                     new
                     {
                         alumnos = filas,
