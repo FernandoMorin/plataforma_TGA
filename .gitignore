@@ -15,3 +15,7 @@ pruebas/obj/
 
 # Archivos subidos (documentos de alumnos y egresados)
 backend/App_Data/
+
+# Despliegue y respaldos: datos de la demo, migrate.sql y PDF (no van al repo público)
+database/despliegue/
+database/respaldo/
