@@ -102,13 +102,14 @@ public class AuthController(TgaDbContext db, Correo correos, ILogger<AuthControl
         var u = await db.Usuario.AsNoTracking().Where(x => x.IdUsuario == User.IdUsuario()).Select(x => new
         {
             x.Nombre, x.Correo, x.ClaveInstitucional, x.RequiereCambio,
+            Genero = x.ProfesorDetalle.Select(p => p.RpeNavigation.Genero).FirstOrDefault(),
             // Segundo acceso (Figma P3): el alumno completa su correo personal y su teléfono.
             SinContacto = x.Alumno.Any(a => a.CorreoPersonal == null || a.Telefono == null),
         }).SingleAsync();
         var rol = User.FindFirstValue(ClaimTypes.Role);
         return Ok(new
         {
-            u.Nombre, u.Correo, u.ClaveInstitucional, rol,
+            u.Nombre, u.Correo, u.ClaveInstitucional, rol, genero = u.Genero,
             requiereCambio = u.RequiereCambio == true,
             completarDatos = rol == Roles.Alumno && u.SinContacto,
             inactividadMinutos = Seguridad.InactividadMinutos,

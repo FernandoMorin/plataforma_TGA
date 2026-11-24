@@ -3,13 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp, CircleUserRound, KeyRound, LogOut } from "lucide-react";
 import { inicio, menus, miCuenta, pagina, paginaDe, type Item, type Rol } from "@/lib/menu";
 import { CompletarDatos, PrimerAcceso } from "@/components/cuenta";
 import { irAlLogin, sesionVencida } from "@/lib/acceso";
 
-type Yo = { nombre: string; rol: Rol; inactividadMinutos: number; requiereCambio: boolean; completarDatos: boolean };
+type Yo = { nombre: string; rol: Rol; genero?: string | null; inactividadMinutos: number; requiereCambio: boolean; completarDatos: boolean };
+const ContextoYo = createContext<Yo | null>(null);
+export const useYo = () => useContext(ContextoYo);
 
 // Recarga completa al salir: con cacheComponents, el router dejaría en memoria las páginas del usuario.
 const irA = (ruta: string) => window.location.replace(ruta);
@@ -44,14 +46,16 @@ export function MarcoPortal({ children }: { children: ReactNode }) {
     );
   if (!permitida) return null;
   return (
-    <div className="flex min-h-screen flex-col bg-blanco">
-      <EncabezadoPortal yo={yo} />
-      <div className="flex flex-1">
-        <MenuLateral rol={yo.rol} ruta={entrada.ruta} />
-        {/* min-w-0: sin él, un texto largo de una página ensancha el área de contenido más allá de la ventana. */}
-        <main className="flex min-w-0 flex-1 flex-col gap-5 px-8 pt-7 pb-8">{children}</main>
+    <ContextoYo.Provider value={yo}>
+      <div className="flex min-h-screen flex-col bg-blanco">
+        <EncabezadoPortal yo={yo} />
+        <div className="flex flex-1">
+          <MenuLateral rol={yo.rol} ruta={entrada.ruta} />
+          {/* min-w-0: sin él, un texto largo de una página ensancha el área de contenido más allá de la ventana. */}
+          <main className="flex min-w-0 flex-1 flex-col gap-5 px-8 pt-7 pb-8">{children}</main>
+        </div>
       </div>
-    </div>
+    </ContextoYo.Provider>
   );
 }
 
@@ -81,20 +85,30 @@ function useInactividad(minutos: number | undefined) {
 const subtitulo: Partial<Record<Rol, string>> = { Coordinador: "Coordinador del Posgrado" };
 
 function EncabezadoPortal({ yo }: { yo: Yo }) {
+  const femenino = yo.genero === "Femenino";
+  const rolVisible = femenino && yo.rol === "Profesor" ? "Profesora"
+    : femenino && yo.rol === "Coordinador" ? "Coordinadora"
+    : yo.rol;
+  const tituloPortal = femenino && (yo.rol === "Profesor" || yo.rol === "Coordinador")
+    ? `PORTAL DE LA ${rolVisible.toUpperCase()}`
+    : `PORTAL DEL ${yo.rol.toUpperCase()}`;
+  const subtituloVisible = yo.rol === "Coordinador"
+    ? (femenino ? "Coordinadora del Posgrado" : "Coordinador del Posgrado")
+    : rolVisible;
   return (
     <header className="flex h-[104px] items-center bg-linear-to-r from-portal-degradado-inicio to-portal-degradado-fin text-blanco">
       <div className="flex h-full w-[270px] shrink-0 items-center border-r border-white/8 bg-portal-logo px-6">
         <Image src="/img/logo-uaslp.png" alt="UASLP" width={200} height={78} className="h-[78px] w-[200px] object-contain" priority />
       </div>
       <div className="flex flex-1 flex-col gap-1.5 pl-8">
-        <p className="text-[26px] font-bold">PORTAL DEL {yo.rol.toUpperCase()}</p>
+        <p className="text-[26px] font-bold">{tituloPortal}</p>
         <p className="font-medium">MAESTRÍA EN TECNOLOGÍA Y GESTIÓN DEL AGUA</p>
       </div>
       <div className="flex items-center gap-3.5 pr-8 text-[15px]">
         <CircleUserRound size={46} strokeWidth={1.5} aria-hidden />
         <div className="flex flex-col gap-1">
           <p className="font-semibold">{yo.nombre}</p>
-          <p>{subtitulo[yo.rol] ?? yo.rol}</p>
+          <p>{subtituloVisible}</p>
         </div>
       </div>
     </header>

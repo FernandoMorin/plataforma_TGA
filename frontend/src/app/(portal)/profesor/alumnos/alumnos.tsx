@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Eye, Search } from "lucide-react";
-import { EncabezadoPagina } from "@/components/portal";
+import { EncabezadoPagina, useYo } from "@/components/portal";
 import { FiltroMultiple, Insignia } from "@/components/modulo";
 import { sesionVencida } from "@/lib/acceso";
 import { pagina } from "@/lib/menu";
@@ -37,6 +37,7 @@ const normalizar = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, 
 const PENDIENTE = "Con pendiente", SIN_PENDIENTE = "Sin pendiente";
 
 export function MisAlumnos() {
+  const yo = useYo();
   const [filas, setFilas] = useState<Fila[] | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
@@ -61,8 +62,9 @@ export function MisAlumnos() {
       && (!pendientes.length || pendientes.includes(pendiente(f)))
       && (!comites.length || comites.includes(f.comite));
     const conteo = (valores: string[], de: (f: Fila) => string) => valores.map((valor) => ({ valor, conteo: todas.filter((f) => de(f) === valor).length }));
+    const rolesBase = yo?.genero === "Femenino" ? ["Directora", "Codirectora", "Sinodal"] : ["Director", "Codirector", "Sinodal"];
     const rolesPresentes = [...new Set(todas.map((f) => f.miRol).filter(Boolean) as string[])];
-    const listaRoles = rolesPresentes.length > 0 ? rolesPresentes : ["Director", "Codirector", "Sinodal"];
+    const listaRoles = rolesPresentes.length > 0 ? rolesPresentes : rolesBase;
     return {
       visibles: todas.filter(pasa),
       opciones: {
@@ -71,7 +73,7 @@ export function MisAlumnos() {
         comites: conteo(["Completo", "Incompleto", "Sin armar"], (f) => f.comite),
       },
     };
-  }, [filas, busqueda, roles, pendientes, comites]);
+  }, [filas, busqueda, roles, pendientes, comites, yo?.genero]);
 
   const p = pagina("/profesor/alumnos")!;
   return (
