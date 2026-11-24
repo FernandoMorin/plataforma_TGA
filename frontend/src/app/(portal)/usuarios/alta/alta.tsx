@@ -44,6 +44,7 @@ export function AltaUsuario() {
       tipo, correo: f.correo, nombre: f.nombre, apellidoPaterno: f.apellidoPaterno, apellidoMaterno: f.apellidoMaterno || null,
       rpe: f.rpe || null, institucion: f.institucion || null, vigenteHasta: f.vigenteHasta || null,
       claveAlumno: numero(f.claveAlumno), idGeneracion: numero(f.idGeneracion), idPeriodo: numero(f.idPeriodo),
+      genero: f.genero || null,
     });
     setEnviando(false);
     if (error) return setResultado({ tipo: "error", texto: error });
@@ -102,10 +103,16 @@ function Campos({ tipo, opciones }: { tipo: Tipo; opciones: Opciones | null }) {
   const paterno = <CampoPortal key="p" etiqueta="Apellido paterno" name="apellidoPaterno" required maxLength={50} />;
   const materno = <CampoPortal key="m" etiqueta="Apellido materno" name="apellidoMaterno" maxLength={50} />;
   const correo = (etiqueta: string) => <CampoPortal key="c" etiqueta={etiqueta} name="correo" type="email" required maxLength={100} />;
+  const genero = (
+    <SelectorPortal key="gen" etiqueta="Género" name="genero" defaultValue="Masculino">
+      <option value="Masculino">Masculino (Profesor / Director / Codirector)</option>
+      <option value="Femenino">Femenino (Profesora / Directora / Codirectora)</option>
+    </SelectorPortal>
+  );
   const campos: Record<Tipo, ReactNode[]> = {
-    profesor: [<CampoPortal key="r" etiqueta="RPE" name="rpe" required inputMode="numeric" pattern="\d{1,10}" maxLength={10} />, correo("Correo institucional"), nombre, paterno, materno],
-    coordinador: [<CampoPortal key="r" etiqueta="RPE" name="rpe" required inputMode="numeric" pattern="\d{1,10}" maxLength={10} />, correo("Correo institucional"), nombre, paterno, materno],
-    externo: [nombre, paterno, materno, correo("Correo"),
+    profesor: [<CampoPortal key="r" etiqueta="RPE" name="rpe" required inputMode="numeric" pattern="\d{1,10}" maxLength={10} />, correo("Correo institucional"), nombre, paterno, materno, genero],
+    coordinador: [<CampoPortal key="r" etiqueta="RPE" name="rpe" required inputMode="numeric" pattern="\d{1,10}" maxLength={10} />, correo("Correo institucional"), nombre, paterno, materno, genero],
+    externo: [nombre, paterno, materno, genero, correo("Correo"),
       <CampoPortal key="i" etiqueta="Institución de procedencia" name="institucion" required maxLength={150} />,
       <CampoPortal key="v" etiqueta="Vigente hasta" name="vigenteHasta" type="date" required min={new Date().toISOString().slice(0, 10)} />],
     alumno: [<CampoPortal key="k" etiqueta="Clave del alumno" name="claveAlumno" required inputMode="numeric" pattern="\d{6}" maxLength={6} />,

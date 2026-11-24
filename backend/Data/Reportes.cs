@@ -183,10 +183,10 @@ public static class Reportes
                 var idsTesis = alumnos.Where(a => a.Trabajo?.EstadoSolicitud == "Aceptada").Select(a => a.Trabajo!.IdTesis).ToList();
                 var comites = (await Titulacion.MiembrosVigentes(db).AsNoTracking().Where(m => idsTesis.Contains(m.IdComiteNavigation.IdTesis))
                         .OrderBy(m => m.IdRolComite).ThenBy(m => m.IdComiteProfesor)
-                        .Select(m => new { m.IdComiteNavigation.IdTesis, Rol = m.IdRolComiteNavigation.Nombre, m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno })
+                        .Select(m => new { m.IdComiteNavigation.IdTesis, m.IdRolComite, m.RpeNavigation.Genero, m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno })
                         .ToListAsync())
                     .GroupBy(m => m.IdTesis)
-                    .ToDictionary(g => g.Key, g => g.Select(m => $"{m.Rol}: {Titulacion.NombreCompleto(m.Nombre, m.ApellidoPaterno, m.ApellidoMaterno)}").ToList());
+                    .ToDictionary(g => g.Key, g => g.Select(m => $"{Titulacion.RolComiteTexto(m.IdRolComite, m.Genero)}: {Titulacion.NombreCompleto(m.Nombre, m.ApellidoPaterno, m.ApellidoMaterno)}").ToList());
                 var filas = alumnos
                     .Where(a => (f.Modalidades is not { Count: > 0 } || f.Modalidades.Contains(a.Modalidad ?? "Sin asignar"))
                         && (f.Estados is not { Count: > 0 } || f.Estados.Contains(a.Estado ?? "")))

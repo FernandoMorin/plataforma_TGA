@@ -35,6 +35,20 @@ public static class EstadoTesis
 public static class RolComite
 {
     public const int Director = 1, Codirector = 2, Sinodal = 3;
+
+    public static string Nombre(int id, string? genero = null)
+    {
+        var f = string.Equals(genero, "Femenino", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(genero, "F", StringComparison.OrdinalIgnoreCase);
+        return (id, f) switch
+        {
+            (Director, true) => "Directora",
+            (Director, false) => "Director",
+            (Codirector, true) => "Codirectora",
+            (Codirector, false) => "Codirector",
+            _ => "Sinodal"
+        };
+    }
 }
 
 // Lo que el scaffolding no trae: llaves naturales, CHECK y catálogos.
@@ -55,6 +69,12 @@ public partial class TgaDbContext
         modelBuilder.Entity<Alumno>().Property(e => e.PendienteConciliar).HasDefaultValue(false);
         modelBuilder.Entity<Documento>().Property(e => e.Verificado).HasDefaultValue(false);
         modelBuilder.Entity<ProfesorDetalle>().Property(e => e.Externo).HasDefaultValue(false);
+        modelBuilder.Entity<Profesor>(e =>
+        {
+            e.Property(x => x.Genero).HasMaxLength(10).HasDefaultValue("Masculino").HasColumnName("genero");
+            e.ToTable(t => t.HasCheckConstraint("ck_profesor_genero", "genero IN ('Masculino', 'Femenino')"));
+        });
+
         // Baja lógica del egresado (decidido el 9 de noviembre de 2026).
         modelBuilder.Entity<Egresado>().Property(e => e.Activo).HasDefaultValue(true).HasColumnName("activo");
 

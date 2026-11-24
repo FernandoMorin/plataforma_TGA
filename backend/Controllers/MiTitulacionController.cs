@@ -154,13 +154,13 @@ public class MiTitulacionController(TgaDbContext db, IConfiguration config, IWeb
             .OrderBy(m => m.IdRolComite).ThenBy(m => m.IdComiteProfesor)
             .Select(m => new
             {
-                m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno, Rol = m.IdRolComiteNavigation.Nombre,
+                m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno, m.RpeNavigation.Genero, m.IdRolComite,
                 Correo = m.RpeNavigation.ProfesorDetalle.Select(d => d.CorreoInstitucional ?? d.IdUsuarioNavigation!.Correo).FirstOrDefault(),
             }).ToListAsync();
         return Ok(new
         {
             clave = comite.Clave, registrado = comite.Registrado,
-            integrantes = integrantes.Select(m => new { nombre = Titulacion.NombreCompleto(m.Nombre, m.ApellidoPaterno, m.ApellidoMaterno), rol = m.Rol, correo = m.Correo }),
+            integrantes = integrantes.Select(m => new { nombre = Titulacion.NombreCompleto(m.Nombre, m.ApellidoPaterno, m.ApellidoMaterno), rol = Titulacion.RolComiteTexto(m.IdRolComite, m.Genero), correo = m.Correo }),
         });
     }
 

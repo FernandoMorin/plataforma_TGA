@@ -22,7 +22,7 @@ type Datos = {
   editable: boolean;
   integrantes: Integrante[];
   historial: { fecha: string | null; accion: string; integrante: string; rolAnterior: string | null; rolNuevo: string | null }[];
-  profesores: { rpe: string; nombre: string; externo: boolean }[];
+  profesores: { rpe: string; nombre: string; externo: boolean; genero?: string }[];
 };
 type Cambio = { tipo: "reemplazar" | "agregar" | "rol" | "quitar"; integrante?: Integrante };
 
@@ -65,7 +65,7 @@ export function DetalleComite() {
 
       <ul className="flex gap-4">
         {datos.integrantes.map((m) => {
-          const director = m.rol === "Director";
+          const director = m.rol === "Director" || m.rol === "Directora";
           return (
             <li key={m.id} className={`flex min-w-0 flex-1 flex-col items-center gap-2.5 rounded-xl border px-[18px] pt-[18px] pb-4 ${director ? "border-portal-info-borde bg-portal-activo-fondo" : "border-portal-borde bg-blanco"}`}>
               <span aria-hidden className={`flex size-[52px] items-center justify-center rounded-full text-[17px] font-bold ${director ? "bg-portal-activo text-blanco" : "bg-portal-neutro-fondo text-portal-subtexto"}`}>
@@ -124,13 +124,23 @@ const botones = { reemplazar: "Reemplazar", agregar: "Agregar", rol: "Cambiar ro
 function DialogoCambio({ id, datos, cambio, onCerrar, onListo }: { id: string; datos: Datos; cambio: Cambio | null; onCerrar: () => void; onListo: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [rpeSeleccionado, setRpeSeleccionado] = useState<string>("");
   const tipo = cambio?.tipo ?? "agregar";
   const m = cambio?.integrante;
-  const director = m?.rol === "Director";
+  const director = m?.rol === "Director" || m?.rol === "Directora";
   // Solo puede entrar quien no está ya; al director lo reemplaza un profesor de planta.
   const enComite = new Set(datos.integrantes.map((i) => i.rpe));
   const candidatos = datos.profesores.filter((p) => !enComite.has(p.rpe) && !(director && p.externo));
-  const opcionesRol = director ? roles.filter((r) => r.id === 1) : roles.filter((r) => r.id !== 1 && !(tipo === "rol" && r.id === m?.idRol));
+  const profTarget = datos.profesores.find((p) => p.rpe === (tipo === "rol" ? m?.rpe : rpeSeleccionado));
+  const esFemenino = profTarget?.genero === "Femenino";
+  const rolesDinamicos = [
+    { id: 1, nombre: esFemenino ? "Directora" : "Director" },
+    { id: 2, nombre: esFemenino ? "Codirectora" : "Codirector" },
+    { id: 3, nombre: "Sinodal" },
+  ];
+  const opcionesRol = director
+    ? rolesDinamicos.filter((r) => r.id === 1)
+    : rolesDinamicos.filter((r) => r.id !== 1 && !(tipo === "rol" && r.id === m?.idRol));
 
   async function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -158,9 +168,9 @@ function DialogoCambio({ id, datos, cambio, onCerrar, onListo }: { id: string; d
           </div>
         )}
         {(tipo === "reemplazar" || tipo === "agregar") && (
-          <SelectorPortal etiqueta="Entra" name="rpe" required defaultValue="">
+          <SelectorPortal etiqueta="Entra" name="rpe" required defaultValue="" onChange={(e) => setRpeSeleccionado(e.target.value)}>
             <option value="" disabled>Seleccionar profesor</option>
-            {candidatos.map((p) => <option key={p.rpe} value={p.rpe}>{p.nombre}{p.externo ? " (externo)" : ""}</option>)}
+            {candidatos.map((p) => <option key={p.rpe} value={p.rpe}>{p.nombre}{p.externo ? (p.genero === "Femenino" ? " (externa)" : " (externo)") : ""}</option>)}
           </SelectorPortal>
         )}
         {tipo !== "quitar" && (

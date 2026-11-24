@@ -96,6 +96,7 @@ public class ProfesorController(TgaDbContext db) : ControllerBase
         var rpe = await MiRpe();
         if (rpe is null) return Forbid();
         await Titulacion.AbrirInformes(db);
+        var miGenero = await db.Profesor.AsNoTracking().Where(p => p.Rpe == rpe).Select(p => p.Genero).FirstOrDefaultAsync();
 
         var tesis = await db.Tesis.AsNoTracking()
             .Where(t => t.EstadoSolicitud == "Aceptada" && t.IdEstadoTesis != EstadoTesis.Cancelada
@@ -108,8 +109,8 @@ public class ProfesorController(TgaDbContext db) : ControllerBase
                 Generacion = t.ClaveAlumnoNavigation.IdGeneracionNavigation!.NombreGeneracion,
                 t.ClaveAlumnoNavigation.Nombre, t.ClaveAlumnoNavigation.ApellidoPaterno, t.ClaveAlumnoNavigation.ApellidoMaterno,
                 TieneComite = t.Comite.Any(),
-                MiRol = t.Comite.SelectMany(c => c.ComiteProfesor).Where(m => m.Rpe == rpe && m.Activo == true)
-                    .Select(m => m.IdRolComiteNavigation.Nombre).FirstOrDefault(),
+                MiIdRol = t.Comite.SelectMany(c => c.ComiteProfesor).Where(m => m.Rpe == rpe && m.Activo == true)
+                    .Select(m => (int?)m.IdRolComite).FirstOrDefault(),
                 // El informe en curso, con mi revisión.
                 Informe = t.Revision.Where(r => r.Estado != "Cerrada").Select(r => new
                 {
@@ -131,10 +132,11 @@ public class ProfesorController(TgaDbContext db) : ControllerBase
                 : i?.Estado == "En firma" && i.Mia?.FechaConformidad is null ? "Firmar"
                 : director && i is null && t.PorcentajeActual >= 100 && t.IdEstadoTesis != EstadoTesis.Aceptada ? "Registrar resolución"
                 : null;
+            var idRol = t.MiIdRol ?? (director ? RolComite.Director : (int?)null);
             return new
             {
                 id = t.IdTesis, clave = t.ClaveAlumno, alumno = Titulacion.NombreCompleto(t.Nombre, t.ApellidoPaterno, t.ApellidoMaterno),
-                generacion = t.Generacion, modalidad = t.Modalidad, miRol = t.MiRol ?? (director ? "Director" : null),
+                generacion = t.Generacion, modalidad = t.Modalidad, miRol = idRol is null ? null : Titulacion.RolComiteTexto(idRol.Value, miGenero),
                 comite, avance = t.PorcentajeActual ?? 0, accion, idRevision = i?.IdRevision,
             };
         }));
@@ -160,19 +162,20 @@ public class ProfesorController(TgaDbContext db) : ControllerBase
             .OrderBy(m => m.IdComiteProfesor).Select(m => new { m.Rpe, m.IdRolComite }).ToListAsync();
         var sinodales = miembros.Where(m => m.IdRolComite == RolComite.Sinodal).Select(m => m.Rpe).ToList();
         var profesores = await Titulacion.Vigentes(db).AsNoTracking().Where(p => p.Rpe != rpe)
-            .Select(p => new { p.Rpe, p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno, Externo = p.ProfesorDetalle.Any(d => d.Externo) })
+            .Select(p => new { p.Rpe, p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno, p.Genero, Externo = p.ProfesorDetalle.Any(d => d.Externo) })
             .ToListAsync();
-        var yo = await db.Profesor.AsNoTracking().Where(p => p.Rpe == rpe).Select(p => new { p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno }).SingleAsync();
+        var yo = await db.Profesor.AsNoTracking().Where(p => p.Rpe == rpe).Select(p => new { p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno, p.Genero }).SingleAsync();
 
         return Ok(new
         {
             alumno = Titulacion.NombreCompleto(alumno.Nombre, alumno.ApellidoPaterno, alumno.ApellidoMaterno),
             clave = t.ClaveAlumno,
             director = Titulacion.NombreCompleto(yo.Nombre, yo.ApellidoPaterno, yo.ApellidoMaterno),
+            rolDirector = Titulacion.RolComiteTexto(RolComite.Director, yo.Genero),
             codirector = miembros.FirstOrDefault(m => m.IdRolComite == RolComite.Codirector)?.Rpe,
             sinodal1 = sinodales.ElementAtOrDefault(0),
             sinodal2 = sinodales.ElementAtOrDefault(1),
-            profesores = profesores.Select(p => new { rpe = p.Rpe, nombre = Titulacion.NombreCompleto(p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno), externo = p.Externo })
+            profesores = profesores.Select(p => new { rpe = p.Rpe, nombre = Titulacion.NombreCompleto(p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno), externo = p.Externo, genero = p.Genero })
                 .OrderBy(p => p.nombre),
         });
     }

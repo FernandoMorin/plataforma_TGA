@@ -47,7 +47,7 @@ public class EvaluacionesController(TgaDbContext db) : ControllerBase
                 r.IdTesisNavigation.ClaveAlumnoNavigation.Nombre, r.IdTesisNavigation.ClaveAlumnoNavigation.ApellidoPaterno,
                 r.IdTesisNavigation.ClaveAlumnoNavigation.ApellidoMaterno,
                 Integrantes = miembros.Where(m => m.IdComiteNavigation.IdTesis == r.IdTesis)
-                    .Select(m => new { m.Rpe, Rol = m.IdRolComiteNavigation.Nombre }).ToList(),
+                    .Select(m => new { m.Rpe, m.IdRolComite, m.RpeNavigation.Genero }).ToList(),
                 Revisiones = r.RevisionProfesor.Select(p => new { p.Rpe, p.FechaEnvio, p.FechaConformidad }).ToList(),
             })
             .OrderByDescending(r => r.FechaInicio).ThenBy(r => r.Nombre).ToListAsync();
@@ -56,9 +56,10 @@ public class EvaluacionesController(TgaDbContext db) : ControllerBase
         {
             var rpes = r.Integrantes.Select(i => i.Rpe).ToHashSet();
             var mia = r.Revisiones.FirstOrDefault(p => p.Rpe == rpe);
+            var yo = r.Integrantes.First(i => i.Rpe == rpe);
             return new Informe(r.IdRevision, r.IdTesis, r.Estado, r.Numero, r.Periodo, r.ClaveAlumno, r.Titulo, r.Modalidad,
                 Titulacion.NombreCompleto(r.Nombre, r.ApellidoPaterno, r.ApellidoMaterno),
-                r.Integrantes.First(i => i.Rpe == rpe).Rol, r.Integrantes.Count,
+                Titulacion.RolComiteTexto(yo.IdRolComite, yo.Genero), r.Integrantes.Count,
                 r.Revisiones.Count(p => rpes.Contains(p.Rpe) && p.FechaEnvio != null),
                 r.Revisiones.Count(p => rpes.Contains(p.Rpe) && p.FechaConformidad != null),
                 mia?.FechaEnvio != null, mia?.FechaConformidad != null);
@@ -73,7 +74,7 @@ public class EvaluacionesController(TgaDbContext db) : ControllerBase
     {
         "Abierta" when !i.EnvieMiRevision => ("Tu revisión pendiente", "rojo", "Revisar"),
         "Abierta" => ($"Revisiones · {i.Enviadas} de {i.Integrantes}", "gris", null),
-        "En consolidación" => ($"Por consolidar · {i.Enviadas} de {i.Integrantes}", "ambar", i.MiRol == "Director" ? "Consolidar" : null),
+        "En consolidación" => ($"Por consolidar · {i.Enviadas} de {i.Integrantes}", "ambar", i.MiRol is "Director" or "Directora" ? "Consolidar" : null),
         "En firma" => ($"Por firmar · {i.Firmadas} de {i.Integrantes}", "azul", i.Firme ? null : "Firmar"),
         _ => ("Cerrada", "verde", "Ver acta"),
     };
@@ -101,7 +102,7 @@ public class EvaluacionesController(TgaDbContext db) : ControllerBase
 
         var integrantes = await Titulacion.MiembrosVigentes(db).AsNoTracking().Where(m => m.IdComiteNavigation.IdTesis == idTesis)
             .OrderBy(m => m.IdRolComite).ThenBy(m => m.IdComiteProfesor)
-            .Select(m => new { m.Rpe, m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno, Rol = m.IdRolComiteNavigation.Nombre })
+            .Select(m => new { m.Rpe, m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno, m.RpeNavigation.Genero, m.IdRolComite })
             .ToListAsync();
         var mios = (await Informes(rpe)).Where(i => i.IdTesis == idTesis).ToDictionary(i => i.IdRevision);
         var informes = await Titulacion.InformesDelTrabajo(db, idTesis);
@@ -125,7 +126,7 @@ public class EvaluacionesController(TgaDbContext db) : ControllerBase
             fechaRegistro = t.FechaRegistro, comite = t.Comite, soyDirector = t.RpeDirector == rpe,
             puedeResolver = t.RpeDirector == rpe && (t.PorcentajeActual ?? 0) >= 100 && t.Estado != "Aceptada" && t.Estado != "Cancelada"
                 && informes.All(i => i.Cerrada),
-            integrantes = integrantes.Select(m => new { nombre = Titulacion.NombreCompleto(m.Nombre, m.ApellidoPaterno, m.ApellidoMaterno), rol = m.Rol, soyYo = m.Rpe == rpe }),
+            integrantes = integrantes.Select(m => new { nombre = Titulacion.NombreCompleto(m.Nombre, m.ApellidoPaterno, m.ApellidoMaterno), rol = Titulacion.RolComiteTexto(m.IdRolComite, m.Genero), soyYo = m.Rpe == rpe }),
             avances,
             informes = informes.Select(i =>
             {
@@ -204,14 +205,14 @@ public class EvaluacionesController(TgaDbContext db) : ControllerBase
         var rpe = await MiRpe();
         if (rpe is null) return Forbid();
         var i = (await Informes(rpe, id)).SingleOrDefault();
-        if (i is null || i.MiRol != "Director") return NotFound();
+        if (i is null || i.MiRol is not ("Director" or "Directora")) return NotFound();
         if (i.Estado != "En consolidación") return Conflict(Error("El informe no está en consolidación."));
 
         var miembros = Titulacion.MiembrosVigentes(db).Where(m => m.IdComiteNavigation.IdTesis == i.IdTesis);
         var revisiones = await miembros.OrderBy(m => m.IdRolComite).ThenBy(m => m.IdComiteProfesor)
             .Select(m => new
             {
-                m.Rpe, Rol = m.IdRolComiteNavigation.Nombre,
+                m.Rpe, m.IdRolComite, m.RpeNavigation.Genero,
                 m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno,
                 Revision = db.RevisionProfesor.Where(p => p.IdRevision == id && p.Rpe == m.Rpe)
                     .Select(p => new { p.CalifDocumento, p.CalifExposicion, p.CalifDominio, p.CalifGradoAvance, p.PorcentajeAvance, p.Comentarios })
@@ -234,7 +235,7 @@ public class EvaluacionesController(TgaDbContext db) : ControllerBase
             idTesis = i.IdTesis, alumno = i.Alumno, informe = i.Numero, periodo = i.Periodo,
             integrantes = revisiones.Select(m => new
             {
-                encabezado = $"{m.ApellidoPaterno ?? m.Nombre} ({m.Rol})",
+                encabezado = $"{m.ApellidoPaterno ?? m.Nombre} ({Titulacion.RolComiteTexto(m.IdRolComite, m.Genero)})",
                 nombre = Titulacion.NombreCompleto(m.Nombre, m.ApellidoPaterno, m.ApellidoMaterno),
                 esMio = m.Rpe == rpe,
                 documento = m.Revision?.CalifDocumento, exposicion = m.Revision?.CalifExposicion, dominio = m.Revision?.CalifDominio,
@@ -267,7 +268,7 @@ public class EvaluacionesController(TgaDbContext db) : ControllerBase
         await using var tx = await db.Database.BeginTransactionAsync();
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT id_revision FROM revision WHERE id_revision = {id} FOR UPDATE");
         var i = (await Informes(rpe, id)).SingleOrDefault();
-        if (i is null || i.MiRol != "Director") return NotFound();
+        if (i is null || i.MiRol is not ("Director" or "Directora")) return NotFound();
         if (i.Estado != "En consolidación") return Conflict(Error("El informe no está en consolidación."));
 
         var r = await db.Revision.SingleAsync(x => x.IdRevision == id);

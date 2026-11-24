@@ -16,6 +16,8 @@ public partial class Profesor
 
     public string? ApellidoMaterno { get; set; }
 
+    public string Genero { get; set; } = "Masculino";
+
     public virtual ICollection<ComiteProfesor> ComiteProfesor { get; set; } = new List<ComiteProfesor>();
 
     public virtual ICollection<ProfesorDetalle> ProfesorDetalle { get; set; } = new List<ProfesorDetalle>();

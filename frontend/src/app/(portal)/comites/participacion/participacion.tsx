@@ -91,7 +91,7 @@ export function Participacion() {
                     <td className="py-3 pl-5"><Link href={`/comites/${p.idComite}`} className="font-semibold text-portal-titulo hover:underline">{p.comite}</Link></td>
                     <td>{p.alumno}</td>
                     <td className="truncate pr-4" title={p.trabajo ?? undefined}>{p.trabajo}</td>
-                    <td><Insignia tono={p.rol === "Director" ? "azul" : "gris"}>{p.rol}</Insignia></td>
+                    <td><Insignia tono={p.rol === "Director" || p.rol === "Directora" ? "azul" : "gris"}>{p.rol}</Insignia></td>
                     <td><Insignia tono={tonoParticipacion[p.participacion]}>{p.participacion}</Insignia></td>
                   </tr>
                 ))}

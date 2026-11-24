@@ -23,7 +23,7 @@ public class TitulacionController(TgaDbContext db) : ControllerBase
                 Modalidad = t.IdModalidadNavigation!.Nombre,
                 Generacion = t.ClaveAlumnoNavigation.IdGeneracionNavigation!.NombreGeneracion,
                 t.ClaveAlumnoNavigation.Nombre, t.ClaveAlumnoNavigation.ApellidoPaterno, t.ClaveAlumnoNavigation.ApellidoMaterno,
-                Director = new { t.RpeDirectorNavigation!.Nombre, t.RpeDirectorNavigation.ApellidoPaterno, t.RpeDirectorNavigation.ApellidoMaterno },
+                Director = new { t.RpeDirectorNavigation!.Nombre, t.RpeDirectorNavigation.ApellidoPaterno, t.RpeDirectorNavigation.ApellidoMaterno, t.RpeDirectorNavigation.Genero },
                 TieneComite = t.Comite.Any(),
                 Informes = t.Revision.Count,
                 EnCurso = t.Revision.Where(r => r.Estado != "Cerrada").Select(r => r.Estado).FirstOrDefault(),
@@ -50,6 +50,7 @@ public class TitulacionController(TgaDbContext db) : ControllerBase
                 id = t.IdTesis, clave = t.ClaveAlumno, alumno = Titulacion.NombreCompleto(t.Nombre, t.ApellidoPaterno, t.ApellidoMaterno),
                 titulo = t.Titulo, modalidad = t.Modalidad, generacion = t.Generacion,
                 director = Titulacion.NombreCompleto(t.Director.Nombre, t.Director.ApellidoPaterno, t.Director.ApellidoMaterno),
+                rolDirector = Titulacion.RolComiteTexto(RolComite.Director, t.Director.Genero),
                 comite, avance = aceptado ? t.PorcentajeActual ?? 0 : (decimal?)null, informe, enCurso = t.EnCurso, grupo,
             };
         }));

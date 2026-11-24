@@ -14,10 +14,11 @@ type Datos = {
   alumno: string;
   clave: number;
   director: string;
+  rolDirector?: string;
   codirector: string | null;
   sinodal1: string | null;
   sinodal2: string | null;
-  profesores: { rpe: string; nombre: string; externo: boolean }[];
+  profesores: { rpe: string; nombre: string; externo: boolean; genero?: string }[];
 };
 
 export function ArmarComite() {
@@ -26,11 +27,16 @@ export function ArmarComite() {
   const [datos, setDatos] = useState<Datos | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [codirectorElegido, setCodirectorElegido] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/profesor/comite/${id}`).then(async (res) => {
       if (res.status === 401) sesionVencida();
-      else if (res.ok) setDatos(await res.json());
+      else if (res.ok) {
+        const d: Datos = await res.json();
+        setDatos(d);
+        setCodirectorElegido(d.codirector);
+      }
       else router.replace("/profesor/alumnos");
     });
   }, [id, router]);
@@ -46,18 +52,24 @@ export function ArmarComite() {
   }
 
   if (!datos) return <EncabezadoPagina titulo="Armar comité" />;
-  const opciones = datos.profesores.map((p) => <option key={p.rpe} value={p.rpe}>{p.nombre}{p.externo ? " (externo)" : ""}</option>);
+  const opciones = datos.profesores.map((p) => (
+    <option key={p.rpe} value={p.rpe}>
+      {p.nombre}{p.externo ? (p.genero === "Femenino" ? " (externa)" : " (externo)") : ""}
+    </option>
+  ));
+  const profCodirector = datos.profesores.find((p) => p.rpe === (codirectorElegido ?? datos.codirector));
+  const etiquetaCodirector = profCodirector?.genero === "Femenino" ? "Codirectora (opcional)" : "Codirector (opcional)";
   return (
     <>
       <EncabezadoPagina titulo="Armar comité" descripcion={`${datos.alumno} · ${datos.clave}`} />
       <form onSubmit={registrar} className="mx-auto flex w-[720px] flex-col gap-3.5 rounded-xl border border-portal-borde bg-blanco px-6 py-5">
         <h2 className="text-[17px] font-semibold text-portal-titulo">Comité tutorial</h2>
-        <p className="text-sm text-portal-subtexto">Un director, un codirector opcional y dos sinodales.</p>
+        <p className="text-sm text-portal-subtexto">Un director o directora, un codirector o codirectora opcional y dos sinodales.</p>
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-semibold text-portal-menu-texto">Director</span>
+          <span className="text-sm font-semibold text-portal-menu-texto">{datos.rolDirector ?? "Director"}</span>
           <p className="rounded-lg bg-portal-tabla-cabecera px-3 py-2.5 text-[15px] font-medium text-portal-titulo">{datos.director} (tú)</p>
         </div>
-        <SelectorPortal etiqueta="Codirector (opcional)" name="codirector" defaultValue={datos.codirector ?? ""}>
+        <SelectorPortal etiqueta={etiquetaCodirector} name="codirector" defaultValue={datos.codirector ?? ""} onChange={(e) => setCodirectorElegido(e.target.value)}>
           <option value="">Sin codirector</option>
           {opciones}
         </SelectorPortal>

@@ -36,7 +36,8 @@ public static class Acta
             .OrderBy(m => m.IdRolComite).ThenBy(m => m.IdComiteProfesor)
             .Select(m => new
             {
-                m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno, Rol = m.IdRolComiteNavigation.Nombre,
+                m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno,
+                m.RpeNavigation.Genero, m.IdRolComite,
                 Conformidad = db.RevisionProfesor.Where(p => p.IdRevision == idRevision && p.Rpe == m.Rpe).Select(p => p.FechaConformidad).FirstOrDefault(),
             }).ToListAsync();
 
@@ -65,7 +66,8 @@ public static class Acta
         var titulo = $"ACTA DE EVALUACIÓN DE AVANCE {(articulo ? "DEL ARTÍCULO CIENTÍFICO" : "DE TESIS")} POR PARTE DEL COMITÉ TUTORIAL";
         return new ContenidoActa(titulo, r.Fecha, parrafos,
             // La conformidad se guarda en UTC; el acta la muestra en hora local.
-            firmas.Select(f => new FirmaActa(Titulacion.NombreCompleto(f.Nombre, f.ApellidoPaterno, f.ApellidoMaterno), f.Rol,
+            firmas.Select(f => new FirmaActa(Titulacion.NombreCompleto(f.Nombre, f.ApellidoPaterno, f.ApellidoMaterno),
+                Titulacion.RolComiteTexto(f.IdRolComite, f.Genero),
                 f.Conformidad is null ? null : DateTime.SpecifyKind(f.Conformidad.Value, DateTimeKind.Utc).ToLocalTime())).ToList());
     }
 

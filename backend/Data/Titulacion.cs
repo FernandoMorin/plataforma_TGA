@@ -14,6 +14,19 @@ public static class Titulacion
     public static string NombreCompleto(string? nombre, string? paterno, string? materno) =>
         string.Join(" ", new[] { nombre, paterno, materno }.Where(p => !string.IsNullOrWhiteSpace(p)));
 
+    public static string DeducirGenero(string? nombre)
+    {
+        if (string.IsNullOrWhiteSpace(nombre)) return "Masculino";
+        var partes = nombre.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var primerNombre = partes[0].ToLowerInvariant();
+        string[] comunes = ["ana", "laura", "maria", "maría", "carmen", "patricia", "karla", "fernanda", "alejandra", "monica", "mónica", "diana", "paola", "itzel", "rosa", "guadalupe", "elizabeth", "claudia", "gabriela", "veronica", "verónica", "lucia", "lucía", "sofia", "sofía", "valeria", "daniela", "beatriz", "adriana", "marisela", "lorena", "teresa"];
+        if (comunes.Contains(primerNombre)) return "Femenino";
+        if (primerNombre.EndsWith('a') && !primerNombre.EndsWith("ma") && primerNombre != "joshua") return "Femenino";
+        return "Masculino";
+    }
+
+    public static string RolComiteTexto(int idRol, string? genero) => RolComite.Nombre(idRol, genero);
+
     // Un integrante deja libre su lugar cuando su cuenta se desactiva o, si es externo, se le vence la vigencia.
     public static IQueryable<Profesor> Vigentes(TgaDbContext db)
     {

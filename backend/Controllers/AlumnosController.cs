@@ -99,10 +99,12 @@ public class AlumnosController(TgaDbContext db) : ControllerBase
         if (t is null) return Ok(new { trabajo = (object?)null, comite = (object?)null, informes = Array.Empty<object>() });
 
         var comite = await db.Comite.AsNoTracking().Where(c => c.IdTesis == t.IdTesis).Select(c => new { c.IdComite, c.Clave }).FirstOrDefaultAsync();
-        var integrantes = comite is null ? [] : await db.ComiteProfesor.AsNoTracking()
+        var integrantes = comite is null ? [] : (await db.ComiteProfesor.AsNoTracking()
             .Where(p => p.IdComite == comite.IdComite && p.Activo == true).OrderBy(p => p.IdRolComite)
-            .Select(p => new { p.RpeNavigation.Nombre, p.RpeNavigation.ApellidoPaterno, p.RpeNavigation.ApellidoMaterno, Rol = p.IdRolComiteNavigation.Nombre })
-            .ToListAsync();
+            .Select(p => new { p.RpeNavigation.Nombre, p.RpeNavigation.ApellidoPaterno, p.RpeNavigation.ApellidoMaterno, p.RpeNavigation.Genero, p.IdRolComite })
+            .ToListAsync())
+            .Select(p => new { p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno, Rol = RolComite.Nombre(p.IdRolComite, p.Genero) })
+            .ToList();
         var aceptado = t.EstadoSolicitud == "Aceptada";
 
         return Ok(new

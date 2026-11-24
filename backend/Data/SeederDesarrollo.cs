@@ -33,21 +33,21 @@ public static class SeederDesarrollo
         db.Usuario.Add(U("admin@uaslp.mx", Administrador, "Administrador del sistema", null));
 
         void Prof(string rpe, string nombre, string paterno, string materno, string correo, int rol,
-                  bool externo = false, string? institucion = null, DateTime? vigenteHasta = null)
+                  bool externo = false, string? institucion = null, DateTime? vigenteHasta = null, string? genero = null)
         {
             db.ProfesorDetalle.Add(new ProfesorDetalle
             {
-                RpeNavigation = new Profesor { Rpe = rpe, Nombre = nombre, ApellidoPaterno = paterno, ApellidoMaterno = materno },
+                RpeNavigation = new Profesor { Rpe = rpe, Nombre = nombre, ApellidoPaterno = paterno, ApellidoMaterno = materno, Genero = genero ?? Titulacion.DeducirGenero(nombre) },
                 IdUsuarioNavigation = U(correo, rol, $"{nombre} {paterno} {materno}", rpe),
                 CorreoInstitucional = correo, Activo = true,
                 Externo = externo, Institucion = institucion, VigenteHasta = vigenteHasta,
             });
         }
-        Prof("100202", "Carlos", "Rivera", "Morales", "crimo@uaslp.mx", Coordinador);
-        Prof("100201", "Ana", "Torres", "Ramírez", "atora@uaslp.mx", Profesor);
-        Prof("100203", "Laura", "Gómez", "Fernández", "lgofe@uaslp.mx", Profesor);
+        Prof("100202", "Carlos", "Rivera", "Morales", "crimo@uaslp.mx", Coordinador, genero: "Masculino");
+        Prof("100201", "Ana", "Torres", "Ramírez", "atora@uaslp.mx", Profesor, genero: "Femenino");
+        Prof("100203", "Laura", "Gómez", "Fernández", "lgofe@uaslp.mx", Profesor, genero: "Femenino");
         Prof("EXT-001", "Miguel", "Ortiz", "Luna", "mortiz@uaq.mx", Profesor,
-             externo: true, institucion: "Universidad Autónoma de Querétaro", vigenteHasta: new(2027, 7, 31));
+             externo: true, institucion: "Universidad Autónoma de Querétaro", vigenteHasta: new(2027, 7, 31), genero: "Masculino");
 
         Alumno Al(int clave, string nombre, string paterno, string materno, Generacion gen, int estado, Usuario? usuario) => new()
         {

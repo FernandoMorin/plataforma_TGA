@@ -54,7 +54,7 @@ export function AlumnoDelComite() {
   if (!datos) return volver;
   const avancesDe = (numero: number) => datos.avances.filter((d) => d.informe === numero);
   const siguientes = avancesDe(datos.informes.length + 1);
-  const completo = datos.integrantes.some((m) => m.rol === "Director") && datos.integrantes.filter((m) => m.rol === "Sinodal").length === 2;
+  const completo = datos.integrantes.some((m) => m.rol === "Director" || m.rol === "Directora") && datos.integrantes.filter((m) => m.rol === "Sinodal").length === 2;
 
   return (
     <>
@@ -88,7 +88,7 @@ export function AlumnoDelComite() {
             {datos.integrantes.map((m) => (
               <li key={m.nombre} className="flex items-center justify-between gap-3 border-t border-portal-borde py-2 text-sm">
                 <span className="text-portal-titulo">{m.nombre}{m.soyYo && " (tú)"}</span>
-                <Insignia tono={m.rol === "Director" ? "azul" : "gris"}>{m.rol}</Insignia>
+                <Insignia tono={m.rol === "Director" || m.rol === "Directora" ? "azul" : "gris"}>{m.rol}</Insignia>
               </li>
             ))}
           </ul>

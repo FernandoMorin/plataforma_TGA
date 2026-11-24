@@ -16,6 +16,7 @@ export type DetalleUsuario = {
   activo: boolean;
   externo: boolean;
   institucion: string | null;
+  genero?: string | null;
   estado: { tipo: string; hasta: string | null };
   bloqueadoHasta: string | null;
   rolesPermitidos: string[];
@@ -62,7 +63,12 @@ export function DialogoEditarUsuario({ id, onCerrar, onListo }: { id: number | n
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     setEnviando(true);
-    const error = await enviarJson(`/api/usuarios/${id}`, "PUT", { correo: f.get("correo"), rol: f.get("rol"), activo: activoActual });
+    const error = await enviarJson(`/api/usuarios/${id}`, "PUT", {
+      correo: f.get("correo"),
+      rol: f.get("rol"),
+      activo: activoActual,
+      genero: f.get("genero") || null,
+    });
     setEnviando(false);
     if (error) return setAviso({ tipo: "error", texto: error });
     cerrar();
@@ -79,6 +85,12 @@ export function DialogoEditarUsuario({ id, onCerrar, onListo }: { id: number | n
           <SelectorPortal etiqueta="Rol" name="rol" defaultValue={u.rol} disabled={u.rolesPermitidos.length === 1}>
             {u.rolesPermitidos.map((r) => <option key={r} value={r}>{r}</option>)}
           </SelectorPortal>
+          {(u.rol === "Profesor" || u.rol === "Coordinador" || u.externo || u.genero) && (
+            <SelectorPortal etiqueta="Género" name="genero" defaultValue={u.genero ?? "Masculino"}>
+              <option value="Masculino">Masculino (Profesor / Director / Codirector)</option>
+              <option value="Femenino">Femenino (Profesora / Directora / Codirectora)</option>
+            </SelectorPortal>
+          )}
           <label className="flex cursor-pointer items-center gap-2.5 text-sm text-portal-menu-texto">
             <button type="button" role="switch" aria-checked={activoActual} onClick={() => setActivo(!activoActual)}
               className={`relative h-6 w-10 rounded-full transition-colors ${activoActual ? "bg-portal-activo" : "bg-portal-borde-campo"}`}>

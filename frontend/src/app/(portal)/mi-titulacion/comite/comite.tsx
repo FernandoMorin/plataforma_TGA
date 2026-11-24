@@ -36,7 +36,7 @@ export function MiComite() {
       <EncabezadoPagina titulo="Mi comité" descripcion={`${datos.clave} · Registrado el ${fecha(datos.registrado)}`} />
       <ul className="mx-auto flex w-[740px] flex-wrap gap-5">
         {datos.integrantes.map((m) => {
-          const director = m.rol === "Director";
+          const director = m.rol === "Director" || m.rol === "Directora";
           return (
             <li key={m.nombre} className={`flex w-[360px] flex-col items-center gap-3 rounded-[14px] border p-[22px] ${director ? "border-portal-info-borde bg-portal-activo-fondo" : "border-portal-borde bg-blanco"}`}>
               <span className={`flex size-16 items-center justify-center rounded-full text-xl font-bold ${director ? "bg-portal-activo text-blanco" : "bg-portal-neutro-fondo text-portal-subtexto"}`} aria-hidden>

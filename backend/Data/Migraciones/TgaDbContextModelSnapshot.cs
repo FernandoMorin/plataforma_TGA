@@ -1417,10 +1417,21 @@ namespace PlataformaTGA.Data.Migraciones
                         .HasColumnType("varchar(50)")
                         .HasColumnName("nombre");
 
+                    b.Property<string>("Genero")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasDefaultValue("Masculino")
+                        .HasColumnName("genero");
+
                     b.HasKey("Rpe")
                         .HasName("PRIMARY");
 
-                    b.ToTable("profesor", (string)null);
+                    b.ToTable("profesor", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_profesor_genero", "genero IN ('Masculino', 'Femenino')");
+                        });
                 });
 
             modelBuilder.Entity("PlataformaTGA.Models.ProfesorDetalle", b =>

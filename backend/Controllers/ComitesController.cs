@@ -15,7 +15,7 @@ public record CambioComiteInput(int? IdComiteProfesor, [MaxLength(10)] string? R
 public class ComitesController(TgaDbContext db) : ControllerBase
 {
     static object Error(string mensaje) => new { mensaje };
-    static string Rol(int id) => id switch { RolComite.Director => "Director", RolComite.Codirector => "Codirector", _ => "Sinodal" };
+    static string Rol(int id, string? genero = null) => RolComite.Nombre(id, genero);
 
     // Lo que le falta a un comité vigente para estar completo («Falta 1 sinodal»), o null si está completo.
     static string? Faltante(IEnumerable<int> roles)
@@ -78,7 +78,7 @@ public class ComitesController(TgaDbContext db) : ControllerBase
 
         var vigentes = await Titulacion.MiembrosVigentes(db).Where(m => m.IdComite == id).Select(m => m.IdComiteProfesor).ToListAsync();
         var filas = await db.ComiteProfesor.AsNoTracking().Where(m => m.IdComite == id).OrderBy(m => m.IdComiteProfesor)
-            .Select(m => new { m.IdComiteProfesor, m.Rpe, m.IdRolComite, m.FechaAsignacion, m.FechaBaja, m.Activo, m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno })
+            .Select(m => new { m.IdComiteProfesor, m.Rpe, m.IdRolComite, m.FechaAsignacion, m.FechaBaja, m.Activo, m.RpeNavigation.Nombre, m.RpeNavigation.ApellidoPaterno, m.RpeNavigation.ApellidoMaterno, m.RpeNavigation.Genero })
             .ToListAsync();
         string NombreDe(string rpe) { var f = filas.First(x => x.Rpe == rpe); return Titulacion.NombreCompleto(f.Nombre, f.ApellidoPaterno, f.ApellidoMaterno); }
 
@@ -86,21 +86,22 @@ public class ComitesController(TgaDbContext db) : ControllerBase
         var registros = await db.ComiteHistorial.AsNoTracking().Where(h => h.IdComite == id)
             .OrderByDescending(h => h.FechaRegistro).ThenByDescending(h => h.IdHistorial).ToListAsync();
         var rpes = registros.SelectMany(h => new[] { h.RpeSale, h.RpeEntra }).OfType<string>().Distinct().ToList();
-        var nombres = (await db.Profesor.AsNoTracking().Where(x => rpes.Contains(x.Rpe)).Select(x => new { x.Rpe, x.Nombre, x.ApellidoPaterno, x.ApellidoMaterno }).ToListAsync())
-            .ToDictionary(x => x.Rpe, x => Titulacion.NombreCompleto(x.Nombre, x.ApellidoPaterno, x.ApellidoMaterno));
-        string? R(int? rol) => rol is null ? null : Rol(rol.Value);
+        var personas = await db.Profesor.AsNoTracking().Where(x => rpes.Contains(x.Rpe)).Select(x => new { x.Rpe, x.Nombre, x.ApellidoPaterno, x.ApellidoMaterno, x.Genero }).ToListAsync();
+        var nombres = personas.ToDictionary(x => x.Rpe, x => Titulacion.NombreCompleto(x.Nombre, x.ApellidoPaterno, x.ApellidoMaterno));
+        var generos = personas.ToDictionary(x => x.Rpe, x => x.Genero);
+        string? R(int? rol, string? rpe) => rol is null ? null : Rol(rol.Value, rpe is not null && generos.TryGetValue(rpe, out var g) ? g : null);
         var historial = registros.SelectMany(h => h.Accion switch
         {
             "Reemplazo" => new[]
             {
-                new { fecha = h.Fecha, accion = h.Accion, integrante = $"{nombres[h.RpeEntra!]} (entra)", rolAnterior = (string?)null, rolNuevo = R(h.RolNuevo) },
-                new { fecha = h.Fecha, accion = h.Accion, integrante = $"{nombres[h.RpeSale!]} (sale)", rolAnterior = R(h.RolAnterior), rolNuevo = (string?)null },
+                new { fecha = h.Fecha, accion = h.Accion, integrante = $"{nombres[h.RpeEntra!]} (entra)", rolAnterior = (string?)null, rolNuevo = R(h.RolNuevo, h.RpeEntra) },
+                new { fecha = h.Fecha, accion = h.Accion, integrante = $"{nombres[h.RpeSale!]} (sale)", rolAnterior = R(h.RolAnterior, h.RpeSale), rolNuevo = (string?)null },
             },
-            _ => [new { fecha = h.Fecha, accion = h.Accion, integrante = nombres[(h.RpeEntra ?? h.RpeSale)!], rolAnterior = R(h.RolAnterior), rolNuevo = R(h.RolNuevo) }],
+            _ => [new { fecha = h.Fecha, accion = h.Accion, integrante = nombres[(h.RpeEntra ?? h.RpeSale)!], rolAnterior = R(h.RolAnterior, h.RpeSale), rolNuevo = R(h.RolNuevo, h.RpeEntra) }],
         }).ToList();
 
         var profesores = await Titulacion.Vigentes(db).AsNoTracking()
-            .Select(p => new { p.Rpe, p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno, Externo = p.ProfesorDetalle.Any(d => d.Externo) }).ToListAsync();
+            .Select(p => new { p.Rpe, p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno, p.Genero, Externo = p.ProfesorDetalle.Any(d => d.Externo) }).ToListAsync();
         var integrantes = filas.Where(f => vigentes.Contains(f.IdComiteProfesor)).OrderBy(f => f.IdRolComite).ThenBy(f => f.IdComiteProfesor).ToList();
         var concluido = c.IdEstadoTesis is EstadoTesis.Aceptada or EstadoTesis.Cancelada;
         var faltante = Faltante(integrantes.Select(i => i.IdRolComite));
@@ -110,9 +111,9 @@ public class ComitesController(TgaDbContext db) : ControllerBase
             clave = c.Clave, claveAlumno = c.ClaveAlumno, alumno = Titulacion.NombreCompleto(c.Nombre, c.ApellidoPaterno, c.ApellidoMaterno),
             modalidad = c.Modalidad, titulo = c.Titulo, estado = concluido ? "Concluido" : faltante ?? "Completo",
             editable = !concluido,
-            integrantes = integrantes.Select(i => new { id = i.IdComiteProfesor, rpe = i.Rpe, nombre = NombreDe(i.Rpe), rol = Rol(i.IdRolComite), idRol = i.IdRolComite, desde = i.FechaAsignacion }),
+            integrantes = integrantes.Select(i => new { id = i.IdComiteProfesor, rpe = i.Rpe, nombre = NombreDe(i.Rpe), rol = Rol(i.IdRolComite, i.Genero), idRol = i.IdRolComite, desde = i.FechaAsignacion }),
             historial,
-            profesores = profesores.Select(p => new { rpe = p.Rpe, nombre = Titulacion.NombreCompleto(p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno), externo = p.Externo })
+            profesores = profesores.Select(p => new { rpe = p.Rpe, nombre = Titulacion.NombreCompleto(p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno), externo = p.Externo, genero = p.Genero })
                 .OrderBy(p => p.nombre),
         });
     }
@@ -197,7 +198,7 @@ public class ComitesController(TgaDbContext db) : ControllerBase
     {
         var p = await db.Profesor.AsNoTracking().Where(x => x.Rpe == rpe).Select(x => new
         {
-            x.Nombre, x.ApellidoPaterno, x.ApellidoMaterno,
+            x.Nombre, x.ApellidoPaterno, x.ApellidoMaterno, x.Genero,
             Correo = x.ProfesorDetalle.Select(d => d.CorreoInstitucional ?? d.IdUsuarioNavigation!.Correo).FirstOrDefault(),
         }).SingleOrDefaultAsync();
         if (p is null) return NotFound();
@@ -213,14 +214,14 @@ public class ComitesController(TgaDbContext db) : ControllerBase
         var participaciones = filas.Select(f => new
         {
             idComite = f.IdComite, comite = f.Clave, alumno = Titulacion.NombreCompleto(f.Nombre, f.ApellidoPaterno, f.ApellidoMaterno), trabajo = f.Titulo,
-            rol = Rol(f.IdRolComite),
+            rol = Rol(f.IdRolComite, p.Genero),
             participacion = f.FechaBaja != null ? "Reemplazada" : f.IdEstadoTesis is EstadoTesis.Aceptada or EstadoTesis.Cancelada ? "Concluida" : "Activa",
         }).ToList();
         return Ok(new
         {
             rpe, nombre = Titulacion.NombreCompleto(p.Nombre, p.ApellidoPaterno, p.ApellidoMaterno), correo = p.Correo,
             activos = participaciones.Count(x => x.participacion == "Activa"),
-            director = participaciones.Count(x => x.participacion == "Activa" && x.rol == "Director"),
+            director = participaciones.Count(x => x.participacion == "Activa" && (x.rol == "Director" || x.rol == "Directora")),
             concluidos = participaciones.Count(x => x.participacion == "Concluida"),
             participaciones,
         });

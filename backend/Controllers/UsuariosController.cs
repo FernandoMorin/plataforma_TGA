@@ -21,9 +21,10 @@ public record AltaUsuarioInput(
     DateTime? VigenteHasta,
     int? ClaveAlumno,
     int? IdGeneracion,
-    int? IdPeriodo);
+    int? IdPeriodo,
+    [RegularExpression("Masculino|Femenino")] string? Genero = null);
 
-public record EdicionUsuarioInput([Required, EmailAddress, MaxLength(100)] string Correo, [Required] string Rol, bool Activo);
+public record EdicionUsuarioInput([Required, EmailAddress, MaxLength(100)] string Correo, [Required] string Rol, bool Activo, [RegularExpression("Masculino|Femenino")] string? Genero = null);
 
 // Gestión de usuarios (AMyD RF-07; Figma U1-U4). Aquí se dan de alta profesores, externos, alumnos temporales,
 // coordinadores y administradores; los alumnos se importan y los egresados se dan de alta en Egresados.
@@ -86,14 +87,14 @@ public partial class UsuariosController(TgaDbContext db, Correo correos, Univers
         {
             x.IdUsuario, x.Nombre, x.Correo, x.ClaveInstitucional, x.Activo, x.BloqueadoHasta,
             Rol = x.IdRolUsuarioNavigation!.Nombre,
-            Profesor = x.ProfesorDetalle.Select(p => new { p.Externo, p.VigenteHasta, p.Institucion }).FirstOrDefault(),
+            Profesor = x.ProfesorDetalle.Select(p => new { p.Externo, p.VigenteHasta, p.Institucion, p.RpeNavigation.Genero }).FirstOrDefault(),
         }).SingleOrDefaultAsync();
         if (u is null) return NotFound();
         var externo = u.Profesor?.Externo == true;
         return Ok(new
         {
             id = u.IdUsuario, nombre = u.Nombre, correo = u.Correo, clave = u.ClaveInstitucional, rol = u.Rol,
-            activo = u.Activo == true, externo, institucion = u.Profesor?.Institucion,
+            activo = u.Activo == true, externo, institucion = u.Profesor?.Institucion, genero = u.Profesor?.Genero,
             estado = Estado(u.Activo, u.BloqueadoHasta, externo ? u.Profesor!.VigenteHasta : null),
             bloqueadoHasta = u.BloqueadoHasta > DateTime.UtcNow ? u.BloqueadoHasta : null,
             rolesPermitidos = RolesPermitidos(u.Rol, u.Profesor is not null, externo),
@@ -144,6 +145,7 @@ public partial class UsuariosController(TgaDbContext db, Correo correos, Univers
         usuario.ContrasenaHash = Seguridad.Hashear(usuario, contrasena);
 
         await using var tx = await db.Database.BeginTransactionAsync();
+        var genero = !string.IsNullOrWhiteSpace(input.Genero) ? input.Genero : Titulacion.DeducirGenero(nombre);
         switch (input.Tipo)
         {
             case "profesor" or "coordinador":
@@ -155,7 +157,7 @@ public partial class UsuariosController(TgaDbContext db, Correo correos, Univers
                 usuario.ClaveInstitucional = rpe;
                 db.ProfesorDetalle.Add(new ProfesorDetalle
                 {
-                    RpeNavigation = new Profesor { Rpe = rpe, Nombre = nombre, ApellidoPaterno = paterno, ApellidoMaterno = materno },
+                    RpeNavigation = new Profesor { Rpe = rpe, Nombre = nombre, ApellidoPaterno = paterno, ApellidoMaterno = materno, Genero = genero },
                     IdUsuarioNavigation = usuario, CorreoInstitucional = correo, Activo = true,
                 });
                 break;
@@ -168,7 +170,7 @@ public partial class UsuariosController(TgaDbContext db, Correo correos, Univers
                 usuario.ClaveInstitucional = clave;
                 db.ProfesorDetalle.Add(new ProfesorDetalle
                 {
-                    RpeNavigation = new Profesor { Rpe = clave, Nombre = nombre, ApellidoPaterno = paterno, ApellidoMaterno = materno },
+                    RpeNavigation = new Profesor { Rpe = clave, Nombre = nombre, ApellidoPaterno = paterno, ApellidoMaterno = materno, Genero = genero },
                     IdUsuarioNavigation = usuario, CorreoInstitucional = correo, Activo = true,
                     Externo = true, Institucion = input.Institucion.Trim(), VigenteHasta = vigencia.Date,
                 });
@@ -250,6 +252,11 @@ public partial class UsuariosController(TgaDbContext db, Correo correos, Univers
         }
         u.IdRolUsuario = await db.CatRolUsuario.Where(r => r.Nombre == input.Rol).Select(r => r.IdRolUsuario).SingleAsync();
         u.Activo = input.Activo;
+        if (profesor is not null && !string.IsNullOrWhiteSpace(input.Genero))
+        {
+            var p = await db.Profesor.SingleOrDefaultAsync(x => x.Rpe == profesor.Rpe);
+            if (p is not null) p.Genero = input.Genero;
+        }
         if (!input.Activo)
         {
             await Seguridad.CerrarSesiones(db, id);

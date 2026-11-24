@@ -61,10 +61,12 @@ export function MisAlumnos() {
       && (!pendientes.length || pendientes.includes(pendiente(f)))
       && (!comites.length || comites.includes(f.comite));
     const conteo = (valores: string[], de: (f: Fila) => string) => valores.map((valor) => ({ valor, conteo: todas.filter((f) => de(f) === valor).length }));
+    const rolesPresentes = [...new Set(todas.map((f) => f.miRol).filter(Boolean) as string[])];
+    const listaRoles = rolesPresentes.length > 0 ? rolesPresentes : ["Director", "Codirector", "Sinodal"];
     return {
       visibles: todas.filter(pasa),
       opciones: {
-        roles: conteo(["Director", "Codirector", "Sinodal"], (f) => f.miRol ?? ""),
+        roles: conteo(listaRoles, (f) => f.miRol ?? ""),
         pendientes: conteo([PENDIENTE, SIN_PENDIENTE], pendiente),
         comites: conteo(["Completo", "Incompleto", "Sin armar"], (f) => f.comite),
       },
