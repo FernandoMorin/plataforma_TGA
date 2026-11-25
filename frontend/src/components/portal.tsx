@@ -82,7 +82,6 @@ function useInactividad(minutos: number | undefined) {
   }, [minutos]);
 }
 
-const subtitulo: Partial<Record<Rol, string>> = { Coordinador: "Coordinador del Posgrado" };
 
 function EncabezadoPortal({ yo }: { yo: Yo }) {
   const femenino = yo.genero === "Femenino";

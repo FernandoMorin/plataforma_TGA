@@ -26,7 +26,6 @@ type Datos = {
 };
 type Cambio = { tipo: "reemplazar" | "agregar" | "rol" | "quitar"; integrante?: Integrante };
 
-const roles = [{ id: 1, nombre: "Director" }, { id: 2, nombre: "Codirector" }, { id: 3, nombre: "Sinodal" }];
 const tonoAccion: Record<string, "verde" | "azul" | "ambar" | "rojo"> = { Alta: "verde", Reemplazo: "azul", "Cambio de rol": "ambar", Baja: "rojo" };
 const enlace = "text-[13px] font-semibold";
 
